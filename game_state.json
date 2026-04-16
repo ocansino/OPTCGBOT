@@ -1,0 +1,18 @@
+{
+  "turn": 1,
+  "active_player": "AI",
+  "ai_player": {
+    "leader": {"name": "Monkey.D.Luffy", "power": 5000, "life": 5, "is_rested": false},
+    "don_total": 2,
+    "don_available": 2,
+    "board": [],
+    "hand_count": 5,
+    "hand": ["OP01-006", "OP01-016"] 
+  },
+  "human_player": {
+    "leader": {"name": "Eustass.Kid", "power": 5000, "life": 5, "is_rested": false},
+    "don_total": 0,
+    "don_available": 0,
+    "board": []
+  }
+}
