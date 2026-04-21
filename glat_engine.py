@@ -6,9 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from ai.agent import GeminiAgent
 
-agent = GeminiAgent()
 
-action_idx = agent.get_action(state, legal_actions)
 
 
 PHASES = ("refresh", "draw", "don", "main", "end")
@@ -544,6 +542,22 @@ class GLATEngine:
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+
     engine = GLATEngine()
-    final_state = engine.run_game(max_turns=10, seed=7, output_path="phase1_game_state.json")
-    print(json.dumps(final_state, indent=2))
+    state = engine.create_initial_state()
+
+    # Fake legal actions (for testing only)
+    legal_actions = [
+        {"type": "play_card", "payload": {"card_id": "P1-CARD-001"}},
+        {"type": "end_turn", "payload": {}}
+    ]
+
+    agent = GeminiAgent()
+
+    print("=== TESTING GEMINI CALL ===")
+
+    action_idx = agent.get_action(state, legal_actions)
+
+    print("Selected action index:", action_idx)
