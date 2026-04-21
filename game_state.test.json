@@ -1,0 +1,50 @@
+{
+  "turn": 1,
+  "active_player": "AI",
+  "ai_player": {
+    "leader": {
+      "name": "Monkey.D.Luffy",
+      "power": 5000,
+      "life": 0,
+      "is_rested": false
+    },
+    "don_total": 2,
+    "don_available": 1,
+    "board": [],
+    "hand_count": 2,
+    "hand": [
+      "OP12-086",
+      "OP12-119"
+    ],
+    "deck": [],
+    "trash": [
+      "OP12-087",
+      "OP12-086"
+    ],
+    "life_cards": []
+  },
+  "human_player": {
+    "leader": {
+      "name": "Eustass.Kid",
+      "power": 5000,
+      "life": 5,
+      "is_rested": false
+    },
+    "don_total": 0,
+    "don_available": 0,
+    "board": [],
+    "hand": [],
+    "deck": [],
+    "trash": [],
+    "life_cards": [],
+    "hand_count": 0
+  },
+  "effect_log": [
+    {
+      "player": "AI",
+      "source": "OP12-086",
+      "target": null,
+      "effect": "Test effect"
+    }
+  ]
+}

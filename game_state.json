@@ -2,17 +2,92 @@
   "turn": 1,
   "active_player": "AI",
   "ai_player": {
-    "leader": {"name": "Monkey.D.Luffy", "power": 5000, "life": 5, "is_rested": false},
+    "leader": {
+      "name": "Koala",
+      "power": 5000,
+      "life": 4,
+      "is_rested": false,
+      "id": "OP12-081",
+      "colors": [
+        "Black",
+        "Yellow"
+      ]
+    },
     "don_total": 2,
-    "don_available": 2,
+    "don_available": 0,
     "board": [],
-    "hand_count": 5,
-    "hand": ["OP01-006", "OP01-016"] 
+    "hand_count": 10,
+    "hand": [
+      "EB03-042",
+      "EB03-042",
+      "EB03-042",
+      "OP12-089",
+      "OP12-089",
+      "OP12-086",
+      "OP12-086",
+      "OP12-086",
+      "OP12-086",
+      "OP12-098"
+    ],
+    "deck": [
+      "OP12-119",
+      "OP12-097",
+      "OP12-098",
+      "OP12-087",
+      "OP12-087",
+      "EB03-053",
+      "OP12-094",
+      "OP12-093",
+      "OP12-098",
+      "OP12-097",
+      "OP12-094",
+      "OP14-108",
+      "OP12-094",
+      "OP12-098",
+      "OP12-112",
+      "OP12-089",
+      "OP12-119",
+      "OP06-115",
+      "OP12-097",
+      "EB03-053",
+      "EB03-053",
+      "OP12-112",
+      "OP12-112",
+      "PRB02-014",
+      "OP12-093",
+      "PRB02-014",
+      "OP14-108",
+      "PRB02-014",
+      "OP12-087",
+      "EB03-053",
+      "OP12-094",
+      "PRB02-014",
+      "OP12-119",
+      "OP12-089",
+      "OP10-109",
+      "OP12-119",
+      "OP12-087",
+      "OP12-093",
+      "OP12-097",
+      "OP12-112"
+    ],
+    "trash": [],
+    "life_cards": []
   },
   "human_player": {
-    "leader": {"name": "Eustass.Kid", "power": 5000, "life": 5, "is_rested": false},
+    "leader": {
+      "name": "Eustass.Kid",
+      "power": 5000,
+      "life": 4,
+      "is_rested": false
+    },
     "don_total": 0,
     "don_available": 0,
-    "board": []
+    "board": [],
+    "hand": [],
+    "deck": [],
+    "trash": [],
+    "life_cards": [],
+    "hand_count": 0
   }
 }
