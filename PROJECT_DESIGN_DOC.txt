@@ -1,7 +1,7 @@
 Grand Line AI Trainer (GLAT)
 Project Design Doc
 
-Last updated: 2026-04-21
+Last updated: 2026-04-23
 
 1. Project Goal
 
@@ -33,13 +33,31 @@ What is already built:
 - legal action generation in referee.py
 - AI main phase flow where:
   - engine generates legal actions
-  - Gemini selects from that list
-  - engine validates and executes the choice
+  - Gemini selects from that list using one call per turn
+  - Gemini can return a short ordered turn plan
+  - engine validates and executes each chosen step
+  - engine safely falls back to end_turn when needed
+- both P1 and P2 decks are built from cards.json
+- guided CLI game loop in cli_game.py for real local play/testing
+- manual state/effect helpers for:
+  - draw
+  - trash from deck
+  - reveal top cards
+  - discard
+  - KO
+  - move between zones
+  - add life
+- initial deck setup now tracks real life cards, not only a life integer
+- first-pass deterministic effect framework for the current Koala deck
+- human interactive effect choices in the CLI for search/select effects
+- first trigger/counter helpers for current deck cards
+- expanded regression coverage in tests/test_glat_engine.py
 
 Important implementation note:
-- current Phase 2 uses one LLM call per turn
-- because of that constraint, the engine currently lets the LLM choose one legal action for the turn and then safely terminates the turn
-- this is intentionally conservative and stable, but not yet full OPCG turn play
+- Phase 2 still respects the one-LLM-call-per-turn rule
+- the model does not invent actions or resolve rules
+- the engine remains the single source of truth
+- the current AI path supports short planned sequences, but defense/reactive play is still not implemented
 
 
 3. Current Architecture
@@ -51,6 +69,12 @@ cards.json
 glat_engine.py
 - main game engine
 - owns state schema, turn loop, action validation, action execution, combat, logs
+- now also owns:
+  - life-card tracking
+  - effect resolution hooks
+  - deck-specific on-play and on-KO effects
+  - trigger/counter helper actions
+  - optional effect-choice provider hook for human-controlled choices
 
 referee.py
 - currently contains legacy state helper code from the earlier prototype
@@ -61,11 +85,21 @@ ai/agent.py
 - Gemini wrapper
 - formats legal actions for the model
 - prompts the model to choose only from listed actions
-- returns an action index
+- returns either an action index or a short turn plan
 
 tests/test_glat_engine.py
 - current verification harness
 - should continue expanding as engine complexity grows
+
+cli_game.py
+- current primary operator interface
+- supports:
+  - AI turns through engine + Gemini/fake AI
+  - guided human turn entry
+  - raw command fallback
+  - manual effect resolution
+  - interactive human effect choices
+  - trigger/counter activation helpers
 
 Older prototype files
 - board_gui.py
@@ -93,56 +127,39 @@ Needs:
 
 
 Phase B: Full AI Turn Selection
-Status: Partially done
+Status: Implemented for current scope
 
 Current behavior:
 - one Gemini call per turn
-- one chosen legal action, then turn ends safely
+- engine generates legal actions once for the turn
+- Gemini returns a short ordered turn plan
+- engine revalidates each action before execution
+- engine ends turn safely if the plan becomes stale or incomplete
 
-Next step:
-- change the LLM contract so a single turn-level call returns a small ordered action plan instead of one move
-- engine should then:
-  - generate legal actions
-  - present them to the LLM
-  - receive a sequence of selected indices or a turn plan
-  - execute each step one at a time
-  - stop if any step becomes illegal
-  - always allow end_turn fallback
-
-Why this is needed:
-- the current one-action turn is safe but too limited
-- real OPCG turns often require play + attach + attack before ending
-- the hard constraint of one LLM call per turn is still compatible with a planned sequence model
-
-Recommended implementation idea:
-- prompt Gemini once per turn with current state + legal actions
-- allow the model to return:
-  {
-    "planned_actions": [3, 5, 8]
-  }
-- engine re-checks legality before every action
-- if the next planned action is no longer legal, end the turn or recompute later
+Remaining gaps:
+- AI does not yet make defense or counter decisions
+- AI does not yet get prompted with structured effect-choice branches during complex card resolution
+- legal action generation still lives outside the engine file
 
 
 Phase C: Human Move Intake
-Status: Not implemented
+Status: Partially implemented
 
-This is the most important next product step.
+What exists now:
+- guided CLI turn flow for the human player
+- raw command fallback
+- manual state correction and effect-resolution tools
+- interactive prompts for human-controlled effect choices on supported cards
 
 Goal:
 - let the human play physically and report their moves
 - engine updates internal game state from those reports
 
 Needed features:
-- parser for human-reported actions
-- command format for common real-life actions, for example:
-  - "I played OP12-086"
-  - "I attached 2 don to Koala"
-  - "I attacked your leader for 6000"
-  - "My character was KO'd"
-  - "I ended turn"
-- validation layer for human-reported actions
-- correction flow when the player input is ambiguous or incomplete
+- richer prompt-driven flow for reporting real-life opponent turns
+- support for effect resolution that depends on hidden zones or player intent
+- correction/reconciliation flow when the physical game and engine state diverge
+- eventually, optional natural-language parsing on top of the structured flow
 
 Recommended approach:
 - do not use free-form natural language first
@@ -151,26 +168,53 @@ Recommended approach:
 
 
 Phase D: Defense / Reaction System
-Status: Not implemented
+Status: Partially implemented
 
-Out of current scope, but necessary for real gameplay.
+What exists now:
+- manual counter helper for current deck cards
+- manual trigger helper for current deck cards
+- attack resolution still stays deterministic in engine
 
-Needed eventually:
-- counter windows
+Still needed for real gameplay:
+- true counter window during attack resolution
 - blocker handling
 - defender decisions
 - attack-step sequencing
-- proper battle resolution timing
+- optional AI defensive choices
+- proper battle timing and cleanup across all reactions
 
 Important note:
-- once this starts, turn flow becomes more interactive
-- the engine should probably move from "main phase only" decisions to a fuller action stack / step-based flow
+- this is now the biggest gameplay gap
+- once this expands, the engine will likely need a more explicit step/timing model rather than only main-phase actions
 
 
 Phase E: Card Effects
-Status: Not implemented
+Status: In progress
 
-Current engine ignores most card text.
+Implemented so far:
+- effect framework inside glat_engine.py
+- supported on-play / on-KO / leader effects for current deck cards:
+  - OP12-097 Captains Assembled
+  - OP12-086 Koala
+  - OP12-094 Monkey.D.Dragon
+  - OP12-087 Nico Robin
+  - OP12-119 Bartholomew Kuma
+  - OP14-108 Silvers Rayleigh
+  - OP12-089 Hack
+  - OP10-109 Basil Hawkins
+  - EB03-042 Koala
+  - OP12-081 Koala Leader
+- supported trigger/counter helpers for:
+  - OP12-098 Hair Removal Fist
+  - OP06-115 You're the One Who Should Disappear.
+  - OP12-112 Baby 5
+
+Still missing:
+- automatic defense timing integration
+- blocker handling
+- many generic timing windows
+- more complete support for optional effects and trigger timing
+- additional card text if the deck changes later
 
 Needed:
 - effect framework
@@ -186,7 +230,7 @@ Recommended direction:
 
 
 Phase F: Product UI
-Status: Prototype exists, not aligned with new direction
+Status: CLI operator interface exists; richer UI deferred
 
 Original idea:
 - Streamlit or lightweight Python UI
@@ -200,9 +244,11 @@ Current recommendation:
   - turn log
   - error/correction messages
 
-The best near-term UI is probably:
-- a simple Streamlit control panel, or
-- a terminal-driven command app
+Current best near-term UI:
+- terminal-driven guided app in cli_game.py
+
+Next UI option later:
+- simple Streamlit control panel once the gameplay loop is more complete
 
 The old playmat UI can be reused later if desired, but it should not be the main focus now.
 
@@ -231,12 +277,12 @@ Recommended future implementation:
 
 Recommended next implementation order:
 
-1. Refactor Phase 2 so one LLM call can produce a full turn plan, not just one action
-2. Build structured human move input and engine updates for opponent turns
+1. Expand defense/reactive timing into a real counter window and blocker system
+2. Improve human physical-turn reporting and reconciliation flow
 3. Add stronger replay/debug tools for saved game logs and state inspection
-4. Expand combat flow toward real defense windows
-5. Implement card effects incrementally for the chosen deck
-6. Build a lightweight operator UI around the engine
+4. Move legal action generation closer to engine ownership or formalize its boundary
+5. Continue incremental card-effect support only where needed for the chosen deck
+6. Build a lightweight operator UI around the engine if the CLI becomes limiting
 7. Add post-game review and lesson tracking
 
 
@@ -247,6 +293,7 @@ Main risks:
 - letting the LLM do too much rules reasoning will create illegal-state risk
 - human free-text input will be messy unless constrained first
 - adding card effects without a clear effect framework will create technical debt
+- reactive battle timing can become brittle if layered onto the current simplified attack flow without a clearer step model
 
 Guiding principle:
 - correctness > intelligence
@@ -280,6 +327,6 @@ docs/
 
 The next meaningful milestone should be:
 
-"The player can report a real-life turn, the engine updates state safely, and the AI can respond with a full legal turn using one LLM call."
+"The player can report a real-life turn, the engine updates state safely, and combat defense windows (counter / blocker / trigger timing) can be handled without breaking legal state."
 
 That is the point where GLAT becomes a usable real-world training tool instead of only a simulation prototype.

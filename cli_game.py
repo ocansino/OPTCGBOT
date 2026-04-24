@@ -55,6 +55,92 @@ def save_state(engine: GLATEngine, state: Dict[str, Any], path: str) -> None:
     engine.save_state(state, path)
 
 
+def cli_effect_choice(
+    state: Dict[str, Any],
+    player_id: str,
+    prompt: str,
+    options: List[Dict[str, Any]],
+    optional: bool,
+) -> Optional[str]:
+    if player_id != HUMAN_PLAYER:
+        return "__default__"
+
+    labels = [card_label(card) for card in options]
+    print(f"\n{prompt}")
+    if optional:
+        print("Choose a card, or 0 to skip.")
+    selection = choose_from_menu(prompt, labels, allow_back=optional)
+    if selection is None:
+        return None
+    return options[selection]["instance_id"]
+
+
+def cli_defense_choice(
+    state: Dict[str, Any],
+    defender_id: str,
+    attacker: Dict[str, Any],
+    target: str,
+    blocker_options: List[Dict[str, Any]],
+    counter_options: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    if defender_id != HUMAN_PLAYER:
+        return {"mode": "default"}
+
+    print("\nDefense window")
+    print(f"Attacker: {card_label(attacker)}")
+    if target == "leader":
+        print("Target: leader")
+    else:
+        defender = state["players"][defender_id]
+        target_card = next((card for card in defender["board"] if card["instance_id"] == target), None)
+        print(f"Target: {card_label(target_card) if target_card else target}")
+
+    blocker_id = None
+    if blocker_options:
+        print("Choose a blocker if you want to redirect the attack.")
+        blocker_index = choose_from_menu(
+            "Available blockers",
+            [card_label(card) for card in blocker_options],
+            allow_back=True,
+        )
+        if blocker_index is not None:
+            blocker_id = blocker_options[blocker_index]["instance_id"]
+
+    chosen_counter_ids: List[str] = []
+    while True:
+        defender = state["players"][defender_id]
+        live_counter_options = [
+            card for card in defender["hand"]
+            if card.get("counter") or card["card_id"] in {"OP12-098", "OP06-115"}
+        ]
+        if not live_counter_options:
+            break
+        counter_index = choose_from_menu(
+            "Use a counter card? Choose one or go back to stop.",
+            [card_label(card) for card in live_counter_options],
+            allow_back=True,
+        )
+        if counter_index is None:
+            break
+        chosen_counter_ids.append(live_counter_options[counter_index]["instance_id"])
+        print(f"Queued counter: {card_label(live_counter_options[counter_index])}")
+
+    return {"blocker_id": blocker_id, "counter_ids": chosen_counter_ids}
+
+
+def cli_trigger_choice(
+    state: Dict[str, Any],
+    player_id: str,
+    card: Dict[str, Any],
+) -> Optional[bool]:
+    if player_id != HUMAN_PLAYER:
+        return None
+    print("\nTrigger window")
+    print(f"Revealed life card: {card_label(card)}")
+    choice = choose_from_menu("Activate this trigger?", ["Yes", "No"], allow_back=False)
+    return choice == 0
+
+
 def print_summary(state: Dict[str, Any]) -> None:
     print("\n" + "=" * 72)
     print(
@@ -126,6 +212,8 @@ Commands:
   ko <instance_id>             Move a board character to trash
   move <id> <from> <to> [pos]  Move card between deck/hand/board/trash/life_cards
   add_life <amount> [P1|P2]    Add top deck card(s) to life
+  counter <card_id> <target>   Use a counter card from hand
+  trigger <card_id> [P1|P2]    Activate a trigger from life cards
   end                          End your turn
   save                         Save current state
   quit                         Exit the CLI
@@ -133,6 +221,59 @@ Commands:
 Tip: Use "actions" first if you are unsure. It only lists engine-valid moves.
 """
     )
+
+
+def choose_from_menu(title: str, options: List[str], allow_back: bool = True) -> Optional[int]:
+    if not options:
+        print(f"{title}: no options")
+        return None
+
+    print(title)
+    for index, option in enumerate(options, start=1):
+        print(f"  {index}. {option}")
+    if allow_back:
+        print("  0. Back")
+
+    while True:
+        raw = input("> ").strip()
+        if raw == "" and allow_back:
+            return None
+        try:
+            selected = int(raw)
+        except ValueError:
+            print("Enter a number from the list.")
+            continue
+        if allow_back and selected == 0:
+            return None
+        if 1 <= selected <= len(options):
+            return selected - 1
+        print("Choice out of range.")
+
+
+def prompt_for_amount(prompt: str, minimum: int = 1, maximum: Optional[int] = None) -> Optional[int]:
+    while True:
+        raw = input(f"{prompt}: ").strip()
+        if raw == "":
+            return None
+        try:
+            value = int(raw)
+        except ValueError:
+            print("Enter a whole number.")
+            continue
+        if value < minimum:
+            print(f"Enter a number >= {minimum}.")
+            continue
+        if maximum is not None and value > maximum:
+            print(f"Enter a number <= {maximum}.")
+            continue
+        return value
+
+
+def prompt_for_player(default_player: str = HUMAN_PLAYER) -> str:
+    raw = input(f"Player [default {default_player}]: ").strip().upper()
+    if raw in ("P1", "P2"):
+        return raw
+    return default_player
 
 
 def start_manual_turn(engine: GLATEngine, state: Dict[str, Any]) -> None:
@@ -273,6 +414,16 @@ def run_manual_command(engine: GLATEngine, state: Dict[str, Any], command: str) 
             player_id = player_arg(parts, 2)
             print("Added life cards:", engine.manual_add_life(state, player_id, amount))
             return True
+
+        if verb == "counter" and len(parts) == 3:
+            player_id = owner_from_instance(parts[1])
+            print("Counter:", engine.manual_use_counter(state, player_id, parts[1], parts[2]))
+            return True
+
+        if verb == "trigger" and len(parts) in (2, 3):
+            player_id = player_arg(parts, 2, owner_from_instance(parts[1]))
+            print("Trigger:", engine.manual_activate_trigger(state, player_id, parts[1]))
+            return True
     except Exception as exc:
         print(f"Manual command failed: {exc}")
         return True
@@ -280,88 +431,268 @@ def run_manual_command(engine: GLATEngine, state: Dict[str, Any], command: str) 
     return False
 
 
-def run_human_turn(engine: GLATEngine, state: Dict[str, Any], state_out: str) -> bool:
-    start_manual_turn(engine, state)
-    print_summary(state)
-    print_help()
+def guided_play_card(engine: GLATEngine, state: Dict[str, Any]) -> bool:
+    actions = [a for a in get_legal_actions(state, engine) if a["type"] == "play_card"]
+    options = [action_label(action) for action in actions]
+    selection = choose_from_menu("Playable cards", options)
+    if selection is None:
+        return False
+    return apply_human_action(engine, state, actions[selection])
 
-    while not state["winner"]:
-        command = input("P2> ").strip()
-        if not command:
-            continue
 
-        lowered = command.lower()
-        if lowered == "quit":
-            save_state(engine, state, state_out)
+def guided_attach_don(engine: GLATEngine, state: Dict[str, Any]) -> bool:
+    actions = [a for a in get_legal_actions(state, engine) if a["type"] == "attach_don"]
+    options = [action_label(action) for action in actions]
+    selection = choose_from_menu("Attach DON options", options)
+    if selection is None:
+        return False
+    return apply_human_action(engine, state, actions[selection])
+
+
+def guided_attack(engine: GLATEngine, state: Dict[str, Any]) -> bool:
+    actions = [a for a in get_legal_actions(state, engine) if a["type"] == "attack"]
+    options = [action_label(action) for action in actions]
+    selection = choose_from_menu("Attack options", options)
+    if selection is None:
+        return False
+    return apply_human_action(engine, state, actions[selection])
+
+
+def guided_effect_resolution(engine: GLATEngine, state: Dict[str, Any]) -> bool:
+    choice = choose_from_menu(
+        "Resolve effect",
+        [
+            "Draw cards",
+            "Trash top cards",
+            "Reveal top cards",
+            "Discard a card from hand",
+            "KO a board card",
+            "Move a card between zones",
+            "Add life from deck",
+            "Use a counter card",
+            "Activate a trigger from life",
+        ],
+    )
+    if choice is None:
+        return False
+
+    if choice == 0:
+        amount = prompt_for_amount("How many cards to draw", 1)
+        if amount is None:
             return False
-        if lowered == "help":
-            print_help()
-            continue
-        if lowered == "state":
-            print_summary(state)
-            continue
-        if lowered == "hand":
-            print_zone(state, HUMAN_PLAYER, "hand")
-            continue
-        if lowered == "board":
-            print_zone(state, AI_PLAYER, "board")
-            print_zone(state, HUMAN_PLAYER, "board")
-            continue
-        if lowered == "trash":
-            print_zone(state, AI_PLAYER, "trash")
-            print_zone(state, HUMAN_PLAYER, "trash")
-            continue
-        if lowered == "life_cards":
-            print_zone(state, AI_PLAYER, "life_cards")
-            print_zone(state, HUMAN_PLAYER, "life_cards")
-            continue
-        if lowered == "logs":
-            print_recent_logs(state)
-            continue
-        if lowered == "save":
-            save_state(engine, state, state_out)
-            print(f"Saved to {state_out}")
-            continue
-        if lowered == "actions":
-            actions = get_legal_actions(state, engine)
-            for index, action in enumerate(actions):
-                print(f"{index}: {action_label(action)}")
-            continue
-        if lowered.startswith("do "):
-            actions = get_legal_actions(state, engine)
-            try:
-                index = int(lowered.split()[1])
-                action = actions[index]
-            except (IndexError, ValueError):
-                print("Usage: do <legal_action_index>")
-                continue
-            if apply_human_action(engine, state, action) and action["type"] == "end_turn":
-                engine.end_phase(state)
+        player_id = prompt_for_player()
+        print("Drawn:", engine.manual_draw(state, player_id, amount))
+        return True
+
+    if choice == 1:
+        amount = prompt_for_amount("How many cards to trash from top of deck", 1)
+        if amount is None:
+            return False
+        player_id = prompt_for_player()
+        print("Trashed:", engine.manual_trash_top(state, player_id, amount))
+        return True
+
+    if choice == 2:
+        amount = prompt_for_amount("How many cards to reveal from top of deck", 1)
+        if amount is None:
+            return False
+        player_id = prompt_for_player()
+        revealed = engine.manual_reveal_top(state, player_id, amount)
+        for card in revealed:
+            print(card_label(card))
+        return True
+
+    if choice == 3:
+        player_id = prompt_for_player()
+        hand = state["players"][player_id]["hand"]
+        selection = choose_from_menu("Choose card to discard", [card_label(card) for card in hand])
+        if selection is None:
+            return False
+        print("Discarded:", engine.manual_discard(state, player_id, hand[selection]["instance_id"]))
+        return True
+
+    if choice == 4:
+        player_id = prompt_for_player()
+        board = state["players"][player_id]["board"]
+        selection = choose_from_menu("Choose board card to KO", [card_label(card) for card in board])
+        if selection is None:
+            return False
+        print("KO:", engine.manual_ko(state, player_id, board[selection]["instance_id"]))
+        return True
+
+    if choice == 5:
+        player_id = prompt_for_player()
+        source_zone_index = choose_from_menu("From zone", ["deck", "hand", "board", "trash", "life_cards"])
+        if source_zone_index is None:
+            return False
+        source_zone = ["deck", "hand", "board", "trash", "life_cards"][source_zone_index]
+        cards = state["players"][player_id][source_zone]
+        selection = choose_from_menu("Choose card to move", [card_label(card) for card in cards])
+        if selection is None:
+            return False
+        destination_zone_index = choose_from_menu("To zone", ["deck", "hand", "board", "trash", "life_cards"])
+        if destination_zone_index is None:
+            return False
+        destination_zone = ["deck", "hand", "board", "trash", "life_cards"][destination_zone_index]
+        position = "bottom"
+        if destination_zone in ("deck", "hand", "trash", "life_cards"):
+            pos_choice = choose_from_menu("Position", ["top", "bottom"])
+            if pos_choice is None:
+                return False
+            position = ["top", "bottom"][pos_choice]
+        print(
+            "Moved:",
+            engine.manual_move_card(
+                state,
+                player_id,
+                cards[selection]["instance_id"],
+                source_zone,
+                destination_zone,
+                position,
+            ),
+        )
+        return True
+
+    if choice == 6:
+        amount = prompt_for_amount("How many life cards to add from top of deck", 1)
+        if amount is None:
+            return False
+        player_id = prompt_for_player()
+        print("Added life cards:", engine.manual_add_life(state, player_id, amount))
+        return True
+
+    if choice == 7:
+        player_id = prompt_for_player()
+        hand = state["players"][player_id]["hand"]
+        counter_options = [
+            card for card in hand
+            if card.get("counter") or card["card_id"] in {"OP12-098", "OP06-115"}
+        ]
+        selection = choose_from_menu("Choose a counter card", [card_label(card) for card in counter_options])
+        if selection is None:
+            return False
+        targets = [state["players"][player_id]["leader"]] + state["players"][player_id]["board"]
+        target_index = choose_from_menu("Choose a counter target", [card_label(card) for card in targets])
+        if target_index is None:
+            return False
+        print(
+            "Counter:",
+            engine.manual_use_counter(
+                state,
+                player_id,
+                counter_options[selection]["instance_id"],
+                targets[target_index]["instance_id"],
+            ),
+        )
+        return True
+
+    player_id = prompt_for_player()
+    life_cards = state["players"][player_id]["life_cards"]
+    selection = choose_from_menu("Choose a life card trigger to activate", [card_label(card) for card in life_cards])
+    if selection is None:
+        return False
+    print(
+        "Trigger:",
+        engine.manual_activate_trigger(
+            state,
+            player_id,
+            life_cards[selection]["instance_id"],
+        ),
+    )
+    return True
+
+
+def guided_human_step(engine: GLATEngine, state: Dict[str, Any], state_out: str) -> Optional[bool]:
+    print("\nWhat did you do?")
+    choice = choose_from_menu(
+        "Choose an action",
+        [
+            "Play a card from hand",
+            "Attach DON",
+            "Declare an attack",
+            "Resolve an effect / move cards",
+            "Show state",
+            "Show hand",
+            "Show board",
+            "Show recent logs",
+            "Enter a raw command",
+            "End turn",
+            "Quit",
+        ],
+        allow_back=False,
+    )
+    if choice is None:
+        return None
+
+    if choice == 0:
+        guided_play_card(engine, state)
+        save_state(engine, state, state_out)
+        return None
+    if choice == 1:
+        guided_attach_don(engine, state)
+        save_state(engine, state, state_out)
+        return None
+    if choice == 2:
+        guided_attack(engine, state)
+        save_state(engine, state, state_out)
+        return None
+    if choice == 3:
+        guided_effect_resolution(engine, state)
+        save_state(engine, state, state_out)
+        return None
+    if choice == 4:
+        print_summary(state)
+        return None
+    if choice == 5:
+        print_zone(state, HUMAN_PLAYER, "hand")
+        return None
+    if choice == 6:
+        print_zone(state, AI_PLAYER, "board")
+        print_zone(state, HUMAN_PLAYER, "board")
+        return None
+    if choice == 7:
+        print_recent_logs(state)
+        return None
+    if choice == 8:
+        raw = input("Raw command> ").strip()
+        if raw:
+            if run_manual_command(engine, state, raw):
                 save_state(engine, state, state_out)
-                return True
-            save_state(engine, state, state_out)
-            continue
-
-        if run_manual_command(engine, state, command):
-            save_state(engine, state, state_out)
-            continue
-
-        try:
-            action = parse_command_to_action(command)
-        except ValueError:
-            print("Could not parse command. Try 'help' or 'actions'.")
-            continue
-
-        if action is None:
-            print("Unknown command. Try 'help' or 'actions'.")
-            continue
-
-        if apply_human_action(engine, state, action) and action["type"] == "end_turn":
+                return None
+            action = parse_command_to_action(raw)
+            if action and apply_human_action(engine, state, action):
+                save_state(engine, state, state_out)
+                if action["type"] == "end_turn":
+                    engine.end_phase(state)
+                    save_state(engine, state, state_out)
+                    return True
+            else:
+                print("Unknown command. Try help-style commands like play/attach/attack/end.")
+        return None
+    if choice == 9:
+        end_action = {"type": "end_turn", "payload": {}}
+        if apply_human_action(engine, state, end_action):
             engine.end_phase(state)
             save_state(engine, state, state_out)
             return True
+        return None
 
-        save_state(engine, state, state_out)
+    save_state(engine, state, state_out)
+    return False
+
+
+def run_human_turn(engine: GLATEngine, state: Dict[str, Any], state_out: str) -> bool:
+    start_manual_turn(engine, state)
+    print_summary(state)
+    print("Guided turn mode is active. Use the menu prompts below.")
+    print("You can still choose 'Enter a raw command' if needed.")
+
+    while not state["winner"]:
+        step_result = guided_human_step(engine, state, state_out)
+        if step_result is True:
+            return True
+        if step_result is False:
+            return False
 
     save_state(engine, state, state_out)
     return False
@@ -403,7 +734,12 @@ def main() -> None:
     args = parser.parse_args()
 
     agent = FakePlanningAgent() if args.fake_ai else None
-    engine = GLATEngine(agent=agent)
+    engine = GLATEngine(
+        agent=agent,
+        effect_choice_provider=cli_effect_choice,
+        defense_choice_provider=cli_defense_choice,
+        trigger_choice_provider=cli_trigger_choice,
+    )
     state = engine.create_initial_state(seed=args.seed)
     save_state(engine, state, args.state_out)
 
