@@ -1,0 +1,285 @@
+Grand Line AI Trainer (GLAT)
+Project Design Doc
+
+Last updated: 2026-04-21
+
+1. Project Goal
+
+Build a One Piece Card Game training assistant where:
+- the rules engine is the source of truth
+- the player reports their real-life actions into the app
+- the AI tracks state and chooses its own legal actions
+- no illegal moves are ever executed by the AI
+
+The long-term architecture should be:
+- Engine enforces rules and state transitions
+- Human input layer records what the player did in real life
+- LLM chooses among engine-generated legal actions only
+- Future review layer analyzes games and produces lessons
+
+
+2. Current Status
+
+What is already built:
+- cards.txt -> cards.json deck extraction pipeline
+- local deck/card data loading from the One Piece card JSON files
+- a Phase 1 deterministic OPCG engine in glat_engine.py
+- turn phases: refresh, draw, don, main, end
+- validation-first action system
+- combat resolution for the simplified Phase 1 ruleset
+- action logging
+- automated tests for turn progression, illegal action rejection, legal-only actions, and combat
+- Gemini integration for Phase 2
+- legal action generation in referee.py
+- AI main phase flow where:
+  - engine generates legal actions
+  - Gemini selects from that list
+  - engine validates and executes the choice
+
+Important implementation note:
+- current Phase 2 uses one LLM call per turn
+- because of that constraint, the engine currently lets the LLM choose one legal action for the turn and then safely terminates the turn
+- this is intentionally conservative and stable, but not yet full OPCG turn play
+
+
+3. Current Architecture
+
+cards.json
+- stores the chosen deck list and card details
+- remains the core deck-definition source for the engine
+
+glat_engine.py
+- main game engine
+- owns state schema, turn loop, action validation, action execution, combat, logs
+
+referee.py
+- currently contains legacy state helper code from the earlier prototype
+- now also contains get_legal_actions(state, engine), which is important for Phase 2
+- likely needs cleanup later so engine helpers are not split awkwardly across files
+
+ai/agent.py
+- Gemini wrapper
+- formats legal actions for the model
+- prompts the model to choose only from listed actions
+- returns an action index
+
+tests/test_glat_engine.py
+- current verification harness
+- should continue expanding as engine complexity grows
+
+Older prototype files
+- board_gui.py
+- table_gui.py
+- game_state.json
+
+These were useful for earlier experimentation but are no longer the main path for the rules engine.
+
+
+4. Recommended Roadmap
+
+Phase A: Stabilize Engine Core
+Status: In progress / mostly done for simplified rules
+
+Goals:
+- keep engine as the single source of truth
+- preserve legality at all times
+- continue expanding tests before adding more intelligence
+
+Needs:
+- move legal action generation closer to engine ownership, or clearly define why it stays in referee.py
+- clean up duplicated prototype logic so the project has one clear game-state path
+- decide on one canonical saved-state file for engine games
+- improve state serialization for replay/debugging
+
+
+Phase B: Full AI Turn Selection
+Status: Partially done
+
+Current behavior:
+- one Gemini call per turn
+- one chosen legal action, then turn ends safely
+
+Next step:
+- change the LLM contract so a single turn-level call returns a small ordered action plan instead of one move
+- engine should then:
+  - generate legal actions
+  - present them to the LLM
+  - receive a sequence of selected indices or a turn plan
+  - execute each step one at a time
+  - stop if any step becomes illegal
+  - always allow end_turn fallback
+
+Why this is needed:
+- the current one-action turn is safe but too limited
+- real OPCG turns often require play + attach + attack before ending
+- the hard constraint of one LLM call per turn is still compatible with a planned sequence model
+
+Recommended implementation idea:
+- prompt Gemini once per turn with current state + legal actions
+- allow the model to return:
+  {
+    "planned_actions": [3, 5, 8]
+  }
+- engine re-checks legality before every action
+- if the next planned action is no longer legal, end the turn or recompute later
+
+
+Phase C: Human Move Intake
+Status: Not implemented
+
+This is the most important next product step.
+
+Goal:
+- let the human play physically and report their moves
+- engine updates internal game state from those reports
+
+Needed features:
+- parser for human-reported actions
+- command format for common real-life actions, for example:
+  - "I played OP12-086"
+  - "I attached 2 don to Koala"
+  - "I attacked your leader for 6000"
+  - "My character was KO'd"
+  - "I ended turn"
+- validation layer for human-reported actions
+- correction flow when the player input is ambiguous or incomplete
+
+Recommended approach:
+- do not use free-form natural language first
+- start with a constrained command syntax or button-driven input
+- later add an LLM parser for convenience after the structured path is stable
+
+
+Phase D: Defense / Reaction System
+Status: Not implemented
+
+Out of current scope, but necessary for real gameplay.
+
+Needed eventually:
+- counter windows
+- blocker handling
+- defender decisions
+- attack-step sequencing
+- proper battle resolution timing
+
+Important note:
+- once this starts, turn flow becomes more interactive
+- the engine should probably move from "main phase only" decisions to a fuller action stack / step-based flow
+
+
+Phase E: Card Effects
+Status: Not implemented
+
+Current engine ignores most card text.
+
+Needed:
+- effect framework
+- triggered effects
+- on play / on attack / on KO handlers
+- card-specific resolvers
+- future retrieval or lookup layer for effect text
+
+Recommended direction:
+- do not let the LLM directly resolve rules text
+- use the LLM only for strategic choice
+- actual card effects should be implemented as engine logic over time
+
+
+Phase F: Product UI
+Status: Prototype exists, not aligned with new direction
+
+Original idea:
+- Streamlit or lightweight Python UI
+
+Current recommendation:
+- deprioritize table GUI until the engine and human-input flow are stable
+- build a simple operator interface first:
+  - current state snapshot
+  - legal actions for AI
+  - human action input
+  - turn log
+  - error/correction messages
+
+The best near-term UI is probably:
+- a simple Streamlit control panel, or
+- a terminal-driven command app
+
+The old playmat UI can be reused later if desired, but it should not be the main focus now.
+
+
+Phase G: Learning / Review Loop
+Status: Future
+
+Goal:
+- analyze completed games
+- identify mistakes
+- produce lessons and strategy notes
+
+Useful outputs:
+- "AI overcommitted DON on turn 3"
+- "AI missed lethal"
+- "AI attacked into inefficient counters"
+
+Recommended future implementation:
+- save full action logs and final state
+- run a post-game reviewer over the log
+- store lessons in a text file or JSON memory store
+- feed only a very small number of recent lessons into future prompts
+
+
+5. Priority Order From Here
+
+Recommended next implementation order:
+
+1. Refactor Phase 2 so one LLM call can produce a full turn plan, not just one action
+2. Build structured human move input and engine updates for opponent turns
+3. Add stronger replay/debug tools for saved game logs and state inspection
+4. Expand combat flow toward real defense windows
+5. Implement card effects incrementally for the chosen deck
+6. Build a lightweight operator UI around the engine
+7. Add post-game review and lesson tracking
+
+
+6. Technical Risks
+
+Main risks:
+- splitting core logic across glat_engine.py and referee.py can become confusing
+- letting the LLM do too much rules reasoning will create illegal-state risk
+- human free-text input will be messy unless constrained first
+- adding card effects without a clear effect framework will create technical debt
+
+Guiding principle:
+- correctness > intelligence
+- engine authority > model creativity
+- structured input > free-form parsing
+
+
+7. Recommended File Direction
+
+Suggested future structure:
+
+glat_engine.py
+- keep or split into engine/, but this should remain the main source of truth
+
+ai/agent.py
+- keep model integration here
+
+referee.py
+- either:
+  - narrow it to utility functions like legal action generation, or
+  - retire it and move legal action generation into engine/
+
+tests/
+- continue expanding around every new rules feature
+
+docs/
+- later move this file there if the project grows
+
+
+8. Definition of Near-Term Success
+
+The next meaningful milestone should be:
+
+"The player can report a real-life turn, the engine updates state safely, and the AI can respond with a full legal turn using one LLM call."
+
+That is the point where GLAT becomes a usable real-world training tool instead of only a simulation prototype.

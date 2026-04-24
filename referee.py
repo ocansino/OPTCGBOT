@@ -4,6 +4,74 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+def get_legal_actions(state: Dict[str, Any], engine: Any) -> List[Dict[str, Any]]:
+    """
+    Returns all valid actions for the current player in the current main phase.
+    """
+    legal_actions: List[Dict[str, Any]] = []
+    player = engine.get_active_player(state)
+    opponent = engine.get_inactive_player(state)
+
+    for card in player["hand"]:
+        if card.get("category") not in ("Character", "Event"):
+            continue
+        action = {
+            "type": "play_card",
+            "payload": {"card_id": card["instance_id"]},
+        }
+        if engine.is_valid_action(state, action):
+            legal_actions.append(action)
+
+    don_available = len(player.get("don_area", []))
+    if don_available > 0:
+        targets = [player["leader"], *player["board"]]
+        amount_candidates = []
+        for candidate in (don_available, max(1, don_available // 2), 1):
+            if 0 < candidate <= don_available and candidate not in amount_candidates:
+                amount_candidates.append(candidate)
+
+        for target in targets:
+            for amount in amount_candidates:
+                action = {
+                    "type": "attach_don",
+                    "payload": {
+                        "card_id": target["instance_id"],
+                        "amount": amount,
+                    },
+                }
+                if engine.is_valid_action(state, action):
+                    legal_actions.append(action)
+
+    attackers = [player["leader"], *player["board"]]
+    for attacker in attackers:
+        if attacker.get("state") != "active":
+            continue
+        if engine._has_summoning_sickness(state, attacker):
+            continue
+
+        target_options = ["leader"]
+        target_options.extend(
+            card["instance_id"] for card in opponent["board"] if card.get("state") == "rested"
+        )
+
+        for target in target_options:
+            action = {
+                "type": "attack",
+                "payload": {
+                    "attacker_id": attacker["instance_id"],
+                    "target": target,
+                },
+            }
+            if engine.is_valid_action(state, action):
+                legal_actions.append(action)
+
+    end_turn = {"type": "end_turn", "payload": {}}
+    if engine.is_valid_action(state, end_turn):
+        legal_actions.append(end_turn)
+
+    return legal_actions
+
+
 class Referee:
     def __init__(
         self,

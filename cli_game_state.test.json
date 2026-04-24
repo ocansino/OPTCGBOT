@@ -1,0 +1,1251 @@
+{
+  "turn": 5,
+  "active_player": "P1",
+  "first_player": "P1",
+  "phase": "end",
+  "winner": null,
+  "logs": [
+    {
+      "turn": 1,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "attach_don",
+        "payload": {
+          "card_id": "P1-LEADER",
+          "amount": 1
+        }
+      },
+      "result": {
+        "attached_to": "P1-LEADER",
+        "amount": 1
+      }
+    },
+    {
+      "turn": 1,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 2,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 3,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "attach_don",
+        "payload": {
+          "card_id": "P1-LEADER",
+          "amount": 3
+        }
+      },
+      "result": {
+        "attached_to": "P1-LEADER",
+        "amount": 3
+      }
+    },
+    {
+      "turn": 3,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 4,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    }
+  ],
+  "players": {
+    "P1": {
+      "life": 4,
+      "deck": [
+        {
+          "instance_id": "P1-CARD-007",
+          "card_id": "OP12-093",
+          "name": "Morley",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-008",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-009",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-010",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-011",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-012",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-013",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-014",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-015",
+          "card_id": "OP12-086",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 1,
+          "power": 2000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-016",
+          "card_id": "OP12-098",
+          "name": "Hair Removal Fist",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-017",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-018",
+          "card_id": "OP12-093",
+          "name": "Morley",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-019",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-020",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-021",
+          "card_id": "OP12-098",
+          "name": "Hair Removal Fist",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-022",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
+          "category": "Character",
+          "cost": 8,
+          "power": 8000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-023",
+          "card_id": "OP06-115",
+          "name": "You're the One Who Should Disappear.",
+          "category": "Event",
+          "cost": 0,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-024",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-025",
+          "card_id": "OP14-108",
+          "name": "Silvers Rayleigh",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-026",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-027",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-028",
+          "card_id": "OP12-086",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 1,
+          "power": 2000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-029",
+          "card_id": "OP14-108",
+          "name": "Silvers Rayleigh",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-030",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-031",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-032",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-033",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-034",
+          "card_id": "OP10-109",
+          "name": "Basil Hawkins",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-035",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-036",
+          "card_id": "EB03-042",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-037",
+          "card_id": "OP12-086",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 1,
+          "power": 2000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-038",
+          "card_id": "OP12-093",
+          "name": "Morley",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-039",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-040",
+          "card_id": "OP12-098",
+          "name": "Hair Removal Fist",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-041",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-042",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
+          "category": "Character",
+          "cost": 8,
+          "power": 8000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-043",
+          "card_id": "EB03-042",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-044",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-045",
+          "card_id": "EB03-042",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-046",
+          "card_id": "OP12-086",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 1,
+          "power": 2000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-047",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-048",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
+          "category": "Character",
+          "cost": 8,
+          "power": 8000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-049",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-050",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        }
+      ],
+      "hand": [
+        {
+          "instance_id": "P1-CARD-001",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
+          "category": "Character",
+          "cost": 8,
+          "power": 8000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-002",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-003",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-004",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-005",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P1-CARD-006",
+          "card_id": "OP12-098",
+          "name": "Hair Removal Fist",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        }
+      ],
+      "board": [],
+      "don_deck": [
+        "P1-DON-04",
+        "P1-DON-05",
+        "P1-DON-06",
+        "P1-DON-07",
+        "P1-DON-08",
+        "P1-DON-09",
+        "P1-DON-10"
+      ],
+      "don_area": [],
+      "spent_don": [],
+      "attached_don": {
+        "P1-LEADER": 3
+      },
+      "leader": {
+        "instance_id": "P1-LEADER",
+        "card_id": "OP12-081",
+        "name": "Koala",
+        "power": 5000,
+        "state": "active"
+      }
+    },
+    "P2": {
+      "life": 4,
+      "deck": [
+        {
+          "instance_id": "P2-CARD-008",
+          "card_id": "OP12-086",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 1,
+          "power": 2000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-009",
+          "card_id": "OP12-086",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 1,
+          "power": 2000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-010",
+          "card_id": "OP12-098",
+          "name": "Hair Removal Fist",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-011",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-012",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-013",
+          "card_id": "EB03-042",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-014",
+          "card_id": "OP12-093",
+          "name": "Morley",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-015",
+          "card_id": "OP10-109",
+          "name": "Basil Hawkins",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-016",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-017",
+          "card_id": "OP12-098",
+          "name": "Hair Removal Fist",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-018",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-019",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-020",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-021",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
+          "category": "Character",
+          "cost": 8,
+          "power": 8000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-022",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-023",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-024",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-025",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-026",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-027",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-028",
+          "card_id": "OP12-086",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 1,
+          "power": 2000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-029",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-030",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
+          "category": "Character",
+          "cost": 8,
+          "power": 8000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-031",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
+          "category": "Character",
+          "cost": 8,
+          "power": 8000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-032",
+          "card_id": "OP12-093",
+          "name": "Morley",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-033",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-034",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-035",
+          "card_id": "OP06-115",
+          "name": "You're the One Who Should Disappear.",
+          "category": "Event",
+          "cost": 0,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-036",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-037",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-038",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-039",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-040",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-041",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-042",
+          "card_id": "OP12-093",
+          "name": "Morley",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-043",
+          "card_id": "OP14-108",
+          "name": "Silvers Rayleigh",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-044",
+          "card_id": "OP12-086",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 1,
+          "power": 2000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-045",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-046",
+          "card_id": "EB03-042",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-047",
+          "card_id": "OP12-098",
+          "name": "Hair Removal Fist",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-048",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-049",
+          "card_id": "EB03-042",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-050",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
+          "category": "Character",
+          "cost": 8,
+          "power": 8000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        }
+      ],
+      "hand": [
+        {
+          "instance_id": "P2-CARD-001",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-002",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-003",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-004",
+          "card_id": "OP14-108",
+          "name": "Silvers Rayleigh",
+          "category": "Character",
+          "cost": 6,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-005",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-006",
+          "card_id": "OP12-098",
+          "name": "Hair Removal Fist",
+          "category": "Event",
+          "cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null
+        },
+        {
+          "instance_id": "P2-CARD-007",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null
+        }
+      ],
+      "board": [],
+      "don_deck": [
+        "P2-DON-05",
+        "P2-DON-06",
+        "P2-DON-07",
+        "P2-DON-08",
+        "P2-DON-09",
+        "P2-DON-10"
+      ],
+      "don_area": [
+        "P2-DON-01",
+        "P2-DON-02",
+        "P2-DON-03",
+        "P2-DON-04"
+      ],
+      "spent_don": [],
+      "attached_don": {},
+      "leader": {
+        "instance_id": "P2-LEADER",
+        "card_id": "OP12-081",
+        "name": "Koala",
+        "power": 5000,
+        "state": "active"
+      }
+    }
+  }
+}

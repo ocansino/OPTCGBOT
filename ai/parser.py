@@ -34,3 +34,32 @@ def parse_action_response(text: str, num_actions: int) -> int:
         raise ValueError("action_index out of range")
 
     return idx
+
+
+def parse_turn_plan_response(text: str, num_actions: int) -> list[int]:
+    """
+    Parse LLM response and return a validated list of action indices.
+    Accepts either:
+    - {"planned_actions": [0, 1, 4]}
+    - {"action_index": 3}
+    """
+    cleaned = extract_json(text)
+    data = json.loads(cleaned)
+
+    if "planned_actions" in data:
+        planned_actions = data["planned_actions"]
+        if not isinstance(planned_actions, list):
+            raise ValueError("planned_actions must be a list")
+        if not planned_actions:
+            raise ValueError("planned_actions must not be empty")
+
+        validated: list[int] = []
+        for idx in planned_actions:
+            if not isinstance(idx, int):
+                raise ValueError("planned_actions entries must be ints")
+            if not (0 <= idx < num_actions):
+                raise ValueError("planned_actions index out of range")
+            validated.append(idx)
+        return validated
+
+    return [parse_action_response(text, num_actions)]

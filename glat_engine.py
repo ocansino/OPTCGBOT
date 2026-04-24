@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ai.agent import GeminiAgent
+from referee import get_legal_actions
 
 
 
@@ -17,11 +18,12 @@ class InvalidActionError(ValueError):
 
 
 class GLATEngine:
-    def __init__(self, cards_path: str = "cards.json") -> None:
+    def __init__(self, cards_path: str = "cards.json", agent: Optional[Any] = None) -> None:
         self.cards_path = Path(cards_path)
         self.deck_definition = self._load_deck_definition()
         self.catalog = self._build_catalog()
         self.instance_counters: Dict[str, int] = {"P1": 0, "P2": 0}
+        self.agent = agent or GeminiAgent()
 
     def _load_deck_definition(self) -> List[Dict[str, Any]]:
         with self.cards_path.open("r", encoding="utf-8") as file:
@@ -97,6 +99,8 @@ class GLATEngine:
             "deck": deck,
             "hand": hand,
             "board": [],
+            "trash": [],
+            "life_cards": [],
             "don_deck": [f"{player_id}-DON-{index:02d}" for index in range(1, 11)],
             "don_area": [],
             "spent_don": [],
@@ -182,6 +186,35 @@ class GLATEngine:
             return player["leader"]
         return next((card for card in player["board"] if card["instance_id"] == instance_id), None)
 
+    def _zone_cards(self, player: Dict[str, Any], zone: str) -> List[Dict[str, Any]]:
+        if zone not in ("deck", "hand", "board", "trash", "life_cards"):
+            raise ValueError(f"Unsupported card zone: {zone}")
+        return player[zone]
+
+    def _remove_card_from_zone(
+        self, player: Dict[str, Any], instance_id: str, zone: str
+    ) -> Dict[str, Any]:
+        cards = self._zone_cards(player, zone)
+        for index, card in enumerate(cards):
+            if card["instance_id"] == instance_id:
+                if zone == "board":
+                    self._return_attached_don_on_leave(player, instance_id)
+                return cards.pop(index)
+        raise ValueError(f"Card {instance_id} not found in {zone}")
+
+    def _add_card_to_zone(
+        self, player: Dict[str, Any], card: Dict[str, Any], zone: str, position: str = "bottom"
+    ) -> None:
+        cards = self._zone_cards(player, zone)
+        if zone == "board":
+            card["state"] = "active"
+            cards.append(card)
+            return
+        if position == "top":
+            cards.insert(0, card)
+        else:
+            cards.append(card)
+
     def _current_power(self, player: Dict[str, Any], card: Dict[str, Any]) -> int:
         attached = player["attached_don"].get(card["instance_id"], 0)
         return (card.get("power") or 0) + (attached * 1000)
@@ -193,6 +226,144 @@ class GLATEngine:
 
     def _opponent_id(self, player_id: str) -> str:
         return "P2" if player_id == "P1" else "P1"
+
+    def manual_draw(self, state: Dict[str, Any], player_id: str, amount: int = 1) -> List[str]:
+        if amount <= 0:
+            raise ValueError("amount must be greater than 0")
+        player = state["players"][player_id]
+        drawn = []
+        for _ in range(amount):
+            card = self.draw_card(player)
+            if card is None:
+                break
+            drawn.append(card["instance_id"])
+        self.log_action(
+            state,
+            player_id,
+            {"type": "manual_draw", "payload": {"amount": amount}},
+            {"drawn": drawn},
+        )
+        self.validate_state(state)
+        return drawn
+
+    def manual_trash_top(self, state: Dict[str, Any], player_id: str, amount: int = 1) -> List[str]:
+        if amount <= 0:
+            raise ValueError("amount must be greater than 0")
+        player = state["players"][player_id]
+        trashed = []
+        for _ in range(amount):
+            if not player["deck"]:
+                break
+            card = player["deck"].pop(0)
+            player["trash"].append(card)
+            trashed.append(card["instance_id"])
+        self.log_action(
+            state,
+            player_id,
+            {"type": "manual_trash_top", "payload": {"amount": amount}},
+            {"trashed": trashed},
+        )
+        self.validate_state(state)
+        return trashed
+
+    def manual_discard(self, state: Dict[str, Any], player_id: str, instance_id: str) -> Dict[str, Any]:
+        player = state["players"][player_id]
+        card = self._remove_card_from_zone(player, instance_id, "hand")
+        player["trash"].append(card)
+        result = {"discarded": card["instance_id"], "card_id": card["card_id"]}
+        self.log_action(
+            state,
+            player_id,
+            {"type": "manual_discard", "payload": {"card_id": instance_id}},
+            result,
+        )
+        self.validate_state(state)
+        return result
+
+    def manual_ko(self, state: Dict[str, Any], player_id: str, instance_id: str) -> Dict[str, Any]:
+        player = state["players"][player_id]
+        card = self._remove_card_from_zone(player, instance_id, "board")
+        player["trash"].append(card)
+        result = {"ko": card["instance_id"], "card_id": card["card_id"]}
+        self.log_action(
+            state,
+            player_id,
+            {"type": "manual_ko", "payload": {"card_id": instance_id}},
+            result,
+        )
+        self.validate_state(state)
+        return result
+
+    def manual_move_card(
+        self,
+        state: Dict[str, Any],
+        player_id: str,
+        instance_id: str,
+        source_zone: str,
+        destination_zone: str,
+        position: str = "bottom",
+    ) -> Dict[str, Any]:
+        player = state["players"][player_id]
+        card = self._remove_card_from_zone(player, instance_id, source_zone)
+        self._add_card_to_zone(player, card, destination_zone, position)
+        result = {
+            "moved": card["instance_id"],
+            "card_id": card["card_id"],
+            "from": source_zone,
+            "to": destination_zone,
+            "position": position,
+        }
+        self.log_action(
+            state,
+            player_id,
+            {
+                "type": "manual_move",
+                "payload": {
+                    "card_id": instance_id,
+                    "from": source_zone,
+                    "to": destination_zone,
+                    "position": position,
+                },
+            },
+            result,
+        )
+        self.validate_state(state)
+        return result
+
+    def manual_add_life(self, state: Dict[str, Any], player_id: str, amount: int = 1) -> List[str]:
+        if amount <= 0:
+            raise ValueError("amount must be greater than 0")
+        player = state["players"][player_id]
+        added = []
+        for _ in range(amount):
+            if not player["deck"]:
+                break
+            card = player["deck"].pop(0)
+            player["life_cards"].append(card)
+            player["life"] += 1
+            added.append(card["instance_id"])
+        self.log_action(
+            state,
+            player_id,
+            {"type": "manual_add_life", "payload": {"amount": amount}},
+            {"added_life": added, "life": player["life"]},
+        )
+        self.validate_state(state)
+        return added
+
+    def manual_reveal_top(self, state: Dict[str, Any], player_id: str, amount: int = 1) -> List[Dict[str, Any]]:
+        if amount <= 0:
+            raise ValueError("amount must be greater than 0")
+        player = state["players"][player_id]
+        revealed = copy.deepcopy(player["deck"][:amount])
+        self.log_action(
+            state,
+            player_id,
+            {"type": "manual_reveal_top", "payload": {"amount": amount}},
+            {"revealed": [card["instance_id"] for card in revealed]},
+        )
+        self.validate_state(state)
+        return revealed
 
     def validate_state(self, state: Dict[str, Any]) -> None:
         if state["active_player"] not in ("P1", "P2"):
@@ -214,7 +385,13 @@ class GLATEngine:
                 raise ValueError(f"{player_id} has invalid DON!! total: {total_don}")
 
             instance_ids = {player["leader"]["instance_id"]}
-            for card in player["board"] + player["hand"] + player["deck"]:
+            for card in (
+                player["board"]
+                + player["hand"]
+                + player["deck"]
+                + player.get("trash", [])
+                + player.get("life_cards", [])
+            ):
                 if card["instance_id"] in instance_ids:
                     raise ValueError(f"Duplicate instance id detected: {card['instance_id']}")
                 instance_ids.add(card["instance_id"])
@@ -274,14 +451,38 @@ class GLATEngine:
 
         self.validate_state(state)
 
-    def scripted_main_phase(self, state: Dict[str, Any]) -> None:
+    def ai_main_phase(self, state: Dict[str, Any]) -> None:
         state["phase"] = "main"
+        legal_actions = get_legal_actions(state, self)
+        if not legal_actions:
+            return
 
-        while not state["winner"]:
-            action = self.choose_main_phase_action(state)
-            self.apply_action(state, action)
-            if action["type"] == "end_turn":
+        planned_indices = self.agent.get_turn_plan(state, legal_actions)
+        if not isinstance(planned_indices, list) or not planned_indices:
+            planned_indices = [len(legal_actions) - 1]
+
+        max_actions_per_turn = 6
+        actions_taken = 0
+
+        for raw_index in planned_indices[:max_actions_per_turn]:
+            if state["winner"]:
                 break
+
+            if not isinstance(raw_index, int) or not (0 <= raw_index < len(legal_actions)):
+                break
+
+            action = copy.deepcopy(legal_actions[raw_index])
+            if not self.is_valid_action(state, action):
+                break
+
+            self.apply_action(state, action)
+            actions_taken += 1
+            if action["type"] == "end_turn":
+                return
+
+        fallback_end_turn = {"type": "end_turn", "payload": {}}
+        if self.is_valid_action(state, fallback_end_turn):
+            self.apply_action(state, fallback_end_turn)
 
     def end_phase(self, state: Dict[str, Any]) -> None:
         state["phase"] = "end"
@@ -292,74 +493,6 @@ class GLATEngine:
         state["active_player"] = self._opponent_id(state["active_player"])
         state["turn"] += 1
         self.validate_state(state)
-
-    def choose_main_phase_action(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        player = self.get_active_player(state)
-        playable = [
-            card
-            for card in player["hand"]
-            if card["category"] == "Character"
-            and len(player["board"]) < 5
-            and len(player["don_area"]) >= (card["cost"] or 0)
-        ]
-        if playable:
-            card = sorted(playable, key=lambda item: (item["cost"], item["power"], item["name"]), reverse=True)[0]
-            return {"type": "play_card", "payload": {"card_id": card["instance_id"]}}
-
-        attack_target = self._best_attach_target(state)
-        if len(player["don_area"]) > 0 and attack_target is not None:
-            return {
-                "type": "attach_don",
-                "payload": {
-                    "card_id": attack_target["instance_id"],
-                    "amount": len(player["don_area"]),
-                },
-            }
-
-        if self.is_first_turn_first_player(state):
-            return {"type": "end_turn", "payload": {}}
-
-        attack_action = self._best_attack_action(state)
-        if attack_action is not None:
-            return attack_action
-
-        return {"type": "end_turn", "payload": {}}
-
-    def _best_attach_target(self, state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        player = self.get_active_player(state)
-        candidates = [player["leader"]]
-        candidates.extend(
-            card for card in player["board"] if not self._has_summoning_sickness(state, card)
-        )
-        if not candidates:
-            return None
-        return sorted(candidates, key=lambda card: (card["power"], card["name"]), reverse=True)[0]
-
-    def _best_attack_action(self, state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        player = self.get_active_player(state)
-        opponent = self.get_inactive_player(state)
-
-        attackers = [player["leader"]] + player["board"]
-        attackers = [
-            card
-            for card in attackers
-            if card["state"] == "active" and not self._has_summoning_sickness(state, card)
-        ]
-        attackers.sort(key=lambda card: self._current_power(player, card), reverse=True)
-
-        for attacker in attackers:
-            attacker_power = self._current_power(player, attacker)
-            rested_targets = [
-                card for card in opponent["board"] if card["state"] == "rested" and attacker_power >= self._current_power(opponent, card)
-            ]
-            if rested_targets:
-                target = sorted(rested_targets, key=lambda card: self._current_power(opponent, card), reverse=True)[0]
-                return {
-                    "type": "attack",
-                    "payload": {"attacker_id": attacker["instance_id"], "target": target["instance_id"]},
-                }
-
-        return None
 
     def is_valid_action(self, state: Dict[str, Any], action: Dict[str, Any]) -> bool:
         try:
@@ -384,11 +517,11 @@ class GLATEngine:
             card = next((item for item in player["hand"] if item["instance_id"] == instance_id), None)
             if card is None:
                 raise InvalidActionError("Card must be in hand")
-            if card["category"] != "Character":
-                raise InvalidActionError("Only Character cards are playable in Phase 1")
+            if card["category"] not in ("Character", "Event"):
+                raise InvalidActionError("Only Character and Event cards are playable right now")
             if len(player["don_area"]) < card["cost"]:
                 raise InvalidActionError("Not enough DON!! to play card")
-            if len(player["board"]) >= 5:
+            if card["category"] == "Character" and len(player["board"]) >= 5:
                 raise InvalidActionError("Board is full")
             return
 
@@ -447,8 +580,12 @@ class GLATEngine:
             self._pay_don(player, card["cost"])
             card["played_turn"] = state["turn"]
             card["state"] = "active"
-            player["board"].append(card)
-            result = {"played": card["card_id"], "board_count": len(player["board"])}
+            if card["category"] == "Character":
+                player["board"].append(card)
+                result = {"played": card["card_id"], "destination": "board", "board_count": len(player["board"])}
+            else:
+                player["trash"].append(card)
+                result = {"played": card["card_id"], "destination": "trash", "effect_resolved": False}
 
         elif action["type"] == "attach_don":
             instance_id = payload["card_id"]
@@ -517,7 +654,7 @@ class GLATEngine:
         self.refresh_phase(state)
         self.draw_phase(state)
         self.don_phase(state)
-        self.scripted_main_phase(state)
+        self.ai_main_phase(state)
         self.end_phase(state)
         return state
 
