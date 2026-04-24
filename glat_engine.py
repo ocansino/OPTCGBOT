@@ -173,6 +173,50 @@ class GLATEngine:
             json.dump(state, file, indent=2)
             file.write("\n")
 
+    def _sync_instance_counters_from_state(self, state: Dict[str, Any]) -> None:
+        counters = {"P1": 0, "P2": 0}
+        for player_id in ("P1", "P2"):
+            player = state["players"][player_id]
+            for zone in ("board", "hand", "deck", "trash", "life_cards"):
+                for card in player.get(zone, []):
+                    instance_id = card.get("instance_id", "")
+                    prefix = f"{player_id}-CARD-"
+                    if instance_id.startswith(prefix):
+                        try:
+                            counters[player_id] = max(counters[player_id], int(instance_id.split("-")[-1]))
+                        except ValueError:
+                            continue
+        self.instance_counters = counters
+
+    def _normalize_loaded_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        state.setdefault("winner", None)
+        state.setdefault("logs", [])
+        state.setdefault("first_player", "P1")
+
+        for player_id in ("P1", "P2"):
+            player = state["players"][player_id]
+            player.setdefault("trash", [])
+            player.setdefault("life_cards", [])
+            player.setdefault("spent_don", [])
+            player.setdefault("turn_flags", {})
+            for zone in ("board", "hand", "deck", "trash", "life_cards"):
+                for card in player.get(zone, []):
+                    card.setdefault("base_cost", card.get("cost", 0) or 0)
+                    card.setdefault("battle_power_bonus", 0)
+                    card.setdefault("temporary_cost_bonus", 0)
+                    card.setdefault("temporary_cost_bonus_expires", None)
+            player["leader"].setdefault("battle_power_bonus", 0)
+
+        return state
+
+    def load_state(self, path: str) -> Dict[str, Any]:
+        with Path(path).open("r", encoding="utf-8") as file:
+            state = json.load(file)
+        state = self._normalize_loaded_state(state)
+        self._sync_instance_counters_from_state(state)
+        self.validate_state(state)
+        return state
+
     def get_active_player(self, state: Dict[str, Any]) -> Dict[str, Any]:
         return state["players"][state["active_player"]]
 
@@ -1174,6 +1218,105 @@ class GLATEngine:
         self.validate_state(state)
         return result
 
+    def manual_set_card_state(
+        self,
+        state: Dict[str, Any],
+        player_id: str,
+        instance_id: str,
+        new_state: str,
+    ) -> Dict[str, Any]:
+        if new_state not in ("active", "rested"):
+            raise ValueError("new_state must be 'active' or 'rested'")
+        player = state["players"][player_id]
+        card = self._find_card_by_instance(player, instance_id)
+        if card is None:
+            raise ValueError(f"Card {instance_id} not found for player {player_id}")
+        old_state = card.get("state", "active")
+        card["state"] = new_state
+        result = {
+            "card_id": card["card_id"],
+            "instance_id": instance_id,
+            "from": old_state,
+            "to": new_state,
+        }
+        self.log_action(
+            state,
+            player_id,
+            {
+                "type": "manual_set_card_state",
+                "payload": {"card_id": instance_id, "state": new_state},
+            },
+            result,
+        )
+        self.validate_state(state)
+        return result
+
+    def manual_move_don(
+        self,
+        state: Dict[str, Any],
+        player_id: str,
+        source_zone: str,
+        destination_zone: str,
+        amount: int = 1,
+        attach_target: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if amount <= 0:
+            raise ValueError("amount must be greater than 0")
+        player = state["players"][player_id]
+        valid_zones = {"don_deck", "don_area", "spent_don", "attached"}
+        if source_zone not in valid_zones or destination_zone not in valid_zones:
+            raise ValueError("Unsupported DON zone")
+        if source_zone == "attached" and not attach_target:
+            raise ValueError("attach_target is required when moving from attached")
+        if destination_zone == "attached" and not attach_target:
+            raise ValueError("attach_target is required when moving to attached")
+
+        moved = []
+        if source_zone == "attached":
+            attached_amount = player["attached_don"].get(attach_target or "", 0)
+            if attached_amount < amount:
+                raise ValueError("Not enough attached DON on target")
+            player["attached_don"][attach_target] = attached_amount - amount
+            if player["attached_don"][attach_target] == 0:
+                player["attached_don"].pop(attach_target, None)
+            moved = [f"ATTACHED-{attach_target}-{index + 1}" for index in range(amount)]
+        else:
+            zone = player[source_zone]
+            if len(zone) < amount:
+                raise ValueError(f"Not enough DON in {source_zone}")
+            for _ in range(amount):
+                moved.append(zone.pop(0))
+
+        if destination_zone == "attached":
+            if self._find_card_by_instance(player, attach_target or "") is None:
+                raise ValueError("Attach target must be on board or be the leader")
+            player["attached_don"][attach_target] = player["attached_don"].get(attach_target, 0) + amount
+        else:
+            player[destination_zone].extend(moved)
+
+        result = {
+            "moved": amount,
+            "from": source_zone,
+            "to": destination_zone,
+            "attach_target": attach_target,
+        }
+        self.log_action(
+            state,
+            player_id,
+            {
+                "type": "manual_move_don",
+                "payload": {
+                    "from": source_zone,
+                    "to": destination_zone,
+                    "amount": amount,
+                    "attach_target": attach_target,
+                },
+            },
+            result,
+        )
+        self.validate_state(state)
+        return result
+
     def manual_add_life(self, state: Dict[str, Any], player_id: str, amount: int = 1) -> List[str]:
         if amount <= 0:
             raise ValueError("amount must be greater than 0")
@@ -1193,6 +1336,50 @@ class GLATEngine:
         )
         self.validate_state(state)
         return added
+
+    def manual_resolve_life_damage(
+        self,
+        state: Dict[str, Any],
+        player_id: str,
+        amount: int = 1,
+    ) -> List[Dict[str, Any]]:
+        if amount <= 0:
+            raise ValueError("amount must be greater than 0")
+        player = state["players"][player_id]
+        results: List[Dict[str, Any]] = []
+
+        for _ in range(amount):
+            if not player["life_cards"]:
+                break
+            revealed = self._remove_card_from_zone(player, player["life_cards"][0]["instance_id"], "life_cards")
+            if self._should_activate_trigger(state, player_id, revealed):
+                resolution = self._resolve_trigger_card(state, player_id, revealed)
+                results.append(
+                    {
+                        "revealed": revealed["instance_id"],
+                        "card_id": revealed["card_id"],
+                        "resolution": "trigger",
+                        "result": resolution,
+                    }
+                )
+            else:
+                player["hand"].append(revealed)
+                results.append(
+                    {
+                        "revealed": revealed["instance_id"],
+                        "card_id": revealed["card_id"],
+                        "resolution": "hand",
+                    }
+                )
+
+        self.log_action(
+            state,
+            player_id,
+            {"type": "manual_resolve_life_damage", "payload": {"amount": amount}},
+            {"results": results, "life": player["life"]},
+        )
+        self.validate_state(state)
+        return results
 
     def manual_use_counter(
         self,

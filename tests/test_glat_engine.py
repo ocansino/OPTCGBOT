@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from glat_engine import GLATEngine, InvalidActionError
 from referee import get_legal_actions
@@ -82,6 +83,23 @@ class GLATEngineTests(unittest.TestCase):
         self.assertEqual(state["turn"], 11)
         self.assertEqual(state["phase"], "end")
         self.assertGreater(len(state["logs"]), 0)
+
+    def test_save_and_load_state_round_trip(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        path = Path("glat_state_roundtrip.test.json")
+        try:
+            self.engine.save_state(state, str(path))
+            loaded = self.engine.load_state(str(path))
+            self.assertEqual(loaded["turn"], state["turn"])
+            self.assertEqual(loaded["active_player"], state["active_player"])
+            self.assertEqual(len(loaded["players"]["P1"]["hand"]), len(state["players"]["P1"]["hand"]))
+            self.assertEqual(len(loaded["players"]["P2"]["life_cards"]), len(state["players"]["P2"]["life_cards"]))
+        finally:
+            if path.exists():
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
 
     def test_initial_state_tracks_life_cards(self) -> None:
         state = self.engine.create_initial_state(seed=7)
@@ -484,6 +502,81 @@ class GLATEngineTests(unittest.TestCase):
         self.assertEqual(len(result["effect_result"]["drawn"]), 2)
         self.assertEqual(len(player["hand"]), starting_hand + 2)
         self.assertEqual(player["life"], 3)
+
+    def test_manual_resolve_life_damage_adds_card_to_hand(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        player = state["players"]["P2"]
+        top_life = player["life_cards"][0]["instance_id"]
+        starting_hand = len(player["hand"])
+
+        result = self.engine.manual_resolve_life_damage(state, "P2", 1)
+
+        self.assertEqual(result[0]["revealed"], top_life)
+        self.assertEqual(result[0]["resolution"], "hand")
+        self.assertEqual(player["life"], 3)
+        self.assertEqual(len(player["hand"]), starting_hand + 1)
+
+    def test_manual_resolve_life_damage_can_activate_trigger(self) -> None:
+        engine = SpyEngine(agent=self.agent, trigger_choice_provider=always_trigger)
+        state = engine.create_initial_state(seed=7)
+        player = state["players"]["P2"]
+        trigger_card = player["life_cards"][0]
+        trigger_card["card_id"] = "OP12-112"
+        trigger_card["name"] = "Baby 5"
+        player["hand"] = []
+        player["deck"] = [
+            engine.build_card_instance("P2", "OP12-086"),
+            engine.build_card_instance("P2", "OP12-093"),
+        ] + player["deck"]
+
+        result = engine.manual_resolve_life_damage(state, "P2", 1)
+
+        self.assertEqual(result[0]["resolution"], "trigger")
+        self.assertEqual(result[0]["result"]["effect_result"]["effect"], "OP12-112")
+        self.assertEqual(len(result[0]["result"]["effect_result"]["drawn"]), 2)
+
+    def test_manual_set_card_state_updates_board_card(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        player = state["players"]["P2"]
+        card = self.engine.build_card_instance("P2", "OP12-086")
+        player["board"] = [card]
+
+        result = self.engine.manual_set_card_state(state, "P2", card["instance_id"], "rested")
+
+        self.assertEqual(result["to"], "rested")
+        self.assertEqual(player["board"][0]["state"], "rested")
+
+    def test_manual_move_don_attaches_and_returns(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        player = state["players"]["P2"]
+        target = self.engine.build_card_instance("P2", "OP12-086")
+        player["board"] = [target]
+        player["don_area"] = ["P2-DON-01", "P2-DON-02"]
+        player["don_deck"] = [f"P2-DON-{index:02d}" for index in range(3, 11)]
+
+        attach_result = self.engine.manual_move_don(
+            state,
+            "P2",
+            "don_area",
+            "attached",
+            2,
+            attach_target=target["instance_id"],
+        )
+        self.assertEqual(attach_result["to"], "attached")
+        self.assertEqual(player["attached_don"][target["instance_id"]], 2)
+        self.assertEqual(len(player["don_area"]), 0)
+
+        return_result = self.engine.manual_move_don(
+            state,
+            "P2",
+            "attached",
+            "don_area",
+            1,
+            attach_target=target["instance_id"],
+        )
+        self.assertEqual(return_result["from"], "attached")
+        self.assertEqual(player["attached_don"][target["instance_id"]], 1)
+        self.assertEqual(len(player["don_area"]), 1)
 
     def test_on_ko_effects_chain_for_hack(self) -> None:
         state = self.engine.create_initial_state(seed=7)

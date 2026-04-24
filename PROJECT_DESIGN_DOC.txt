@@ -1,7 +1,7 @@
 Grand Line AI Trainer (GLAT)
 Project Design Doc
 
-Last updated: 2026-04-23
+Last updated: 2026-04-24
 
 1. Project Goal
 
@@ -11,11 +11,22 @@ Build a One Piece Card Game training assistant where:
 - the AI tracks state and chooses its own legal actions
 - no illegal moves are ever executed by the AI
 
+Primary intended product experience:
+- the human plays their real physical deck at the table
+- the human reports what they played and what happened during their turn
+- the program updates the shared board state from those reports
+- the AI then plays its own turn through the engine using only legal actions
+- over time, the reporting UX should become simple enough that the player can report compact actions like:
+  - "I played OP12-012"
+  - "I attacked your leader with OP12-094"
+  - "I used a 2k counter on Koala"
+
 The long-term architecture should be:
 - Engine enforces rules and state transitions
 - Human input layer records what the player did in real life
 - LLM chooses among engine-generated legal actions only
 - Future review layer analyzes games and produces lessons
+- Future training modes can also run AI vs AI games entirely inside the engine
 
 
 2. Current Status
@@ -39,6 +50,7 @@ What is already built:
   - engine safely falls back to end_turn when needed
 - both P1 and P2 decks are built from cards.json
 - guided CLI game loop in cli_game.py for real local play/testing
+- save/load and mid-game resume support for CLI engine games
 - manual state/effect helpers for:
   - draw
   - trash from deck
@@ -51,6 +63,8 @@ What is already built:
 - first-pass deterministic effect framework for the current Koala deck
 - human interactive effect choices in the CLI for search/select effects
 - first trigger/counter helpers for current deck cards
+- scenario-based human turn reporting flow for real physical play
+- guided review/correction tools for reconciling state drift
 - expanded regression coverage in tests/test_glat_engine.py
 
 Important implementation note:
@@ -96,10 +110,13 @@ cli_game.py
 - supports:
   - AI turns through engine + Gemini/fake AI
   - guided human turn entry
+  - scenario-based physical turn reporting
   - raw command fallback
   - manual effect resolution
   - interactive human effect choices
   - trigger/counter activation helpers
+  - review/correction tooling
+  - save/load resume flow
 
 Older prototype files
 - board_gui.py
@@ -143,37 +160,55 @@ Remaining gaps:
 
 
 Phase C: Human Move Intake
-Status: Partially implemented
+Status: Strong partial implementation
 
 What exists now:
 - guided CLI turn flow for the human player
+- guided opponent-turn intake flow in the CLI for real physical play
 - raw command fallback
 - manual state correction and effect-resolution tools
 - interactive prompts for human-controlled effect choices on supported cards
+- scenario-driven reporting prompts for common real-table actions
+- life-damage reporting helpers for physical play
 
 Goal:
 - let the human play physically and report their moves
 - engine updates internal game state from those reports
+- make the reporting loop clean enough that the AI can react to a reported physical turn without manual reconstruction work
 
 Needed features:
 - richer prompt-driven flow for reporting real-life opponent turns
 - support for effect resolution that depends on hidden zones or player intent
 - correction/reconciliation flow when the physical game and engine state diverge
 - eventually, optional natural-language parsing on top of the structured flow
+- eventual shorthand card-entry flow so the player can report actions primarily by card ID or short text commands
+
+What is still missing:
+- faster shorthand reporting for common actions after the guided path is stable
+- better prompts for “what happened during this attack?”
+- easier support for hidden information when the human intentionally wants to keep some details unknown to the AI
+- a lightweight text-first intake path where the player can enter compact reports like "played OP12-012"
 
 Recommended approach:
 - do not use free-form natural language first
 - start with a constrained command syntax or button-driven input
 - later add an LLM parser for convenience after the structured path is stable
+- preserve a strict structured path underneath any future shorthand or natural-language convenience layer
 
 
 Phase D: Defense / Reaction System
-Status: Partially implemented
+Status: Implemented for current simplified scope / still incomplete for full OPCG
 
 What exists now:
 - manual counter helper for current deck cards
 - manual trigger helper for current deck cards
-- attack resolution still stays deterministic in engine
+- attack declaration now includes:
+  - blocker window
+  - counter window
+  - trigger handling on life damage
+  - battle cleanup
+- human defense prompts in CLI
+- deterministic engine-controlled AI defense without extra LLM calls
 
 Still needed for real gameplay:
 - true counter window during attack resolution
@@ -182,6 +217,10 @@ Still needed for real gameplay:
 - attack-step sequencing
 - optional AI defensive choices
 - proper battle timing and cleanup across all reactions
+
+Clarification:
+- a basic defense flow now exists
+- what remains is depth/completeness, not starting from zero
 
 Important note:
 - this is now the biggest gameplay gap
@@ -273,17 +312,32 @@ Recommended future implementation:
 - feed only a very small number of recent lessons into future prompts
 
 
+Phase H: Training Modes
+Status: Future
+
+Target modes:
+- Human vs AI with the human using a real physical deck and reporting actions into the app
+- AI vs AI self-play for testing, regression hunting, and strategy training
+
+Notes:
+- Human vs AI remains the primary user-facing mode
+- AI vs AI should reuse the same engine/state/logging path whenever possible
+- self-play should be introduced only after the human-reporting path is stable enough to trust as the main product loop
+
+
 5. Priority Order From Here
 
 Recommended next implementation order:
 
-1. Expand defense/reactive timing into a real counter window and blocker system
-2. Improve human physical-turn reporting and reconciliation flow
-3. Add stronger replay/debug tools for saved game logs and state inspection
-4. Move legal action generation closer to engine ownership or formalize its boundary
-5. Continue incremental card-effect support only where needed for the chosen deck
+1. Turn the current human reporting flow into a full guided “opponent turn intake” sequence
+2. Add stronger replay/debug tools for saved game logs and state inspection
+3. Move legal action generation closer to engine ownership or formalize its boundary
+4. Continue incremental card-effect support only where needed for the chosen deck
+5. Improve AI planning around effect choices and offensive sequencing
 6. Build a lightweight operator UI around the engine if the CLI becomes limiting
 7. Add post-game review and lesson tracking
+8. Add shorthand opponent-intake syntax and later optional natural-language parsing
+9. Add AI vs AI self-play/training modes on top of the same engine
 
 
 6. Technical Risks
@@ -327,6 +381,10 @@ docs/
 
 The next meaningful milestone should be:
 
-"The player can report a real-life turn, the engine updates state safely, and combat defense windows (counter / blocker / trigger timing) can be handled without breaking legal state."
+"The player can report an entire real-life turn through a guided flow, the engine can be corrected safely when table state drifts, and the AI can respond from the resumed state without reconstruction work."
 
 That is the point where GLAT becomes a usable real-world training tool instead of only a simulation prototype.
+
+Longer-term success looks like:
+
+"A human can play a real deck against the AI with low-friction reporting, and the same engine can also run AI vs AI games for testing and training."

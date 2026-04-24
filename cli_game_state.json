@@ -1,5 +1,5 @@
 {
-  "turn": 2,
+  "turn": 4,
   "active_player": "P2",
   "first_player": "P1",
   "phase": "main",
@@ -39,29 +39,39 @@
       "phase": "main",
       "player": "P2",
       "action": {
-        "type": "play_card",
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 3,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "attach_don",
         "payload": {
-          "card_id": "P2-CARD-005"
+          "card_id": "P1-LEADER",
+          "amount": 3
         }
       },
       "result": {
-        "played": "OP12-097",
-        "destination": "trash",
-        "paid_cost": 1,
-        "effect_resolved": true,
-        "effect_result": {
-          "looked_at": [
-            "P2-CARD-011",
-            "P2-CARD-012",
-            "P2-CARD-013"
-          ],
-          "added": "P2-CARD-012",
-          "trashed": [
-            "P2-CARD-011",
-            "P2-CARD-013"
-          ],
-          "effect": "OP12-097"
-        }
+        "attached_to": "P1-LEADER",
+        "amount": 3
+      }
+    },
+    {
+      "turn": 3,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
       }
     }
   ],
@@ -69,20 +79,6 @@
     "P1": {
       "life": 4,
       "deck": [
-        {
-          "instance_id": "P1-CARD-010",
-          "card_id": "OP12-112",
-          "name": "Baby 5",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 2000,
-          "state": "active",
-          "played_turn": null,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
         {
           "instance_id": "P1-CARD-011",
           "card_id": "OP12-097",
@@ -94,6 +90,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -108,6 +105,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -122,6 +120,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -136,6 +135,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -150,6 +150,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -164,6 +165,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -178,6 +180,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -192,6 +195,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -206,6 +210,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -220,6 +225,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -234,6 +240,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -248,6 +255,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -262,6 +270,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -276,6 +285,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -290,6 +300,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -304,6 +315,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -318,6 +330,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -332,6 +345,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -346,6 +360,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -360,6 +375,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -374,6 +390,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -388,6 +405,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -402,6 +420,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -416,6 +435,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -430,6 +450,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -444,6 +465,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -458,6 +480,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -472,6 +495,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -486,6 +510,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -500,6 +525,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -514,6 +540,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -528,6 +555,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -542,6 +570,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -556,6 +585,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -570,6 +600,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -584,6 +615,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -598,6 +630,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -612,6 +645,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -626,6 +660,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -640,6 +675,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         }
@@ -656,6 +692,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -670,6 +707,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -684,6 +722,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -698,6 +737,22 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P1-CARD-010",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         }
@@ -715,6 +770,7 @@
           "counter": null,
           "state": "active",
           "played_turn": 1,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         }
@@ -731,6 +787,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -745,6 +802,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -759,6 +817,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -773,13 +832,12 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         }
       ],
       "don_deck": [
-        "P1-DON-02",
-        "P1-DON-03",
         "P1-DON-04",
         "P1-DON-05",
         "P1-DON-06",
@@ -789,10 +847,10 @@
         "P1-DON-10"
       ],
       "don_area": [],
-      "spent_don": [
-        "P1-DON-01"
-      ],
-      "attached_don": {},
+      "spent_don": [],
+      "attached_don": {
+        "P1-LEADER": 3
+      },
       "leader": {
         "instance_id": "P1-LEADER",
         "card_id": "OP12-081",
@@ -806,6 +864,36 @@
       "life": 4,
       "deck": [
         {
+          "instance_id": "P2-CARD-012",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "base_cost": 6,
+          "power": 6000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-013",
+          "card_id": "EB03-042",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
           "instance_id": "P2-CARD-014",
           "card_id": "OP12-093",
           "name": "Morley",
@@ -816,6 +904,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -830,6 +919,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -844,6 +934,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -858,6 +949,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -872,6 +964,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -886,6 +979,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -900,6 +994,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -914,6 +1009,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -928,6 +1024,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -942,6 +1039,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -956,6 +1054,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -970,6 +1069,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -984,6 +1084,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -998,6 +1099,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1012,6 +1114,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1026,6 +1129,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1040,6 +1144,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1054,6 +1159,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1068,6 +1174,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1082,6 +1189,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1096,6 +1204,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1110,6 +1219,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1124,6 +1234,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1138,6 +1249,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1152,6 +1264,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1166,6 +1279,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1180,6 +1294,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1194,6 +1309,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1208,6 +1324,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1222,6 +1339,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1236,6 +1354,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1250,6 +1369,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1264,6 +1384,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1278,6 +1399,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1292,6 +1414,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1306,6 +1429,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1320,6 +1444,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         }
@@ -1336,6 +1461,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1350,6 +1476,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1364,6 +1491,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1378,6 +1506,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1392,20 +1521,22 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
         {
-          "instance_id": "P2-CARD-012",
-          "card_id": "PRB02-014",
-          "name": "Sabo",
+          "instance_id": "P2-CARD-011",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
           "category": "Character",
-          "cost": 6,
-          "base_cost": 6,
-          "power": 6000,
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         }
@@ -1423,34 +1554,7 @@
           "counter": null,
           "state": "active",
           "played_turn": 2,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-011",
-          "card_id": "OP12-112",
-          "name": "Baby 5",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 2000,
-          "state": "active",
-          "played_turn": null,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-013",
-          "card_id": "EB03-042",
-          "name": "Koala",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         }
@@ -1467,6 +1571,7 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1481,6 +1586,7 @@
           "counter": null,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1495,6 +1601,7 @@
           "counter": 2000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
@@ -1509,13 +1616,12 @@
           "counter": 1000,
           "state": "active",
           "played_turn": null,
+          "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         }
       ],
       "don_deck": [
-        "P2-DON-03",
-        "P2-DON-04",
         "P2-DON-05",
         "P2-DON-06",
         "P2-DON-07",
@@ -1524,11 +1630,12 @@
         "P2-DON-10"
       ],
       "don_area": [
-        "P2-DON-02"
+        "P2-DON-02",
+        "P2-DON-01",
+        "P2-DON-03",
+        "P2-DON-04"
       ],
-      "spent_don": [
-        "P2-DON-01"
-      ],
+      "spent_don": [],
       "attached_don": {},
       "leader": {
         "instance_id": "P2-LEADER",
@@ -1538,6 +1645,76 @@
         "state": "active"
       },
       "turn_flags": {}
+    }
+  },
+  "cli_context": {
+    "opponent_turn_history": [
+      {
+        "turn": 1,
+        "player": "P2",
+        "phase": "refresh",
+        "status": "active",
+        "events": [],
+        "memory": {}
+      },
+      {
+        "turn": 2,
+        "player": "P2",
+        "phase": "main",
+        "status": "completed",
+        "events": [
+          {
+            "index": 1,
+            "stage": "turn_start",
+            "summary": "Started operator GUI opponent turn intake after refresh/draw/DON.",
+            "details": {
+              "turn": 2,
+              "active_player": "P2",
+              "phase": "main"
+            }
+          }
+        ],
+        "memory": {},
+        "final_phase": "end"
+      },
+      {
+        "turn": 4,
+        "player": "P2",
+        "phase": "main",
+        "status": "active",
+        "events": [
+          {
+            "index": 1,
+            "stage": "turn_start",
+            "summary": "Started operator GUI opponent turn intake after refresh/draw/DON.",
+            "details": {
+              "turn": 4,
+              "active_player": "P2",
+              "phase": "main"
+            }
+          }
+        ],
+        "memory": {}
+      }
+    ],
+    "active_opponent_intake": {
+      "turn": 4,
+      "player": "P2",
+      "phase": "main",
+      "status": "active",
+      "events": [
+        {
+          "index": 1,
+          "stage": "turn_start",
+          "summary": "Started operator GUI opponent turn intake after refresh/draw/DON.",
+          "details": {
+            "turn": 4,
+            "active_player": "P2",
+            "phase": "main"
+          }
+        }
+      ],
+      "memory": {}
     }
   }
 }
