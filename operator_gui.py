@@ -14,7 +14,9 @@ from cli_game import (
     cli_defense_choice,
     cli_effect_choice,
     cli_trigger_choice,
+    format_battle_context_lines,
     finish_opponent_intake_session,
+    get_last_battle_context,
     handle_shorthand_report,
     load_state,
     log_opponent_intake_event,
@@ -73,6 +75,16 @@ def collect_intake_log_lines(state: Dict[str, Any]) -> List[str]:
     for event in session.get("events", [])[-12:]:
         lines.append(f"{event['index']}. [{event['stage']}] {event['summary']}")
     return lines
+
+
+def collect_battle_trace_lines(state: Dict[str, Any]) -> List[str]:
+    live_context = state.get("battle_context")
+    if live_context:
+        return format_battle_context_lines(live_context)
+    last_context = get_last_battle_context(state)
+    if last_context:
+        return format_battle_context_lines(last_context)
+    return ["No battle trace yet."]
 
 
 def ensure_human_turn_ready(engine: GLATEngine, state: Dict[str, Any]) -> Tuple[bool, str]:
@@ -173,6 +185,7 @@ class OperatorGUI(tk.Tk):
         right.rowconfigure(2, weight=1)
         right.rowconfigure(3, weight=1)
         right.rowconfigure(4, weight=1)
+        right.rowconfigure(5, weight=1)
 
         self._build_player_panel(left, AI_PLAYER, 0)
         self._build_player_panel(left, HUMAN_PLAYER, 1)
@@ -266,11 +279,18 @@ class OperatorGUI(tk.Tk):
         self.intake_list.grid(row=0, column=0, sticky="nsew")
 
         log_frame = ttk.LabelFrame(parent, text="Action Log", padding=10)
-        log_frame.grid(row=4, column=0, sticky="nsew")
+        log_frame.grid(row=4, column=0, sticky="nsew", pady=(0, 10))
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
         self.log_list = tk.Listbox(log_frame, exportselection=False)
         self.log_list.grid(row=0, column=0, sticky="nsew")
+
+        battle_frame = ttk.LabelFrame(parent, text="Battle Trace", padding=10)
+        battle_frame.grid(row=5, column=0, sticky="nsew")
+        battle_frame.columnconfigure(0, weight=1)
+        battle_frame.rowconfigure(0, weight=1)
+        self.battle_list = tk.Listbox(battle_frame, exportselection=False)
+        self.battle_list.grid(row=0, column=0, sticky="nsew")
 
     def _set_text(self, widget: tk.Text, text: str) -> None:
         widget.configure(state="normal")
@@ -288,6 +308,7 @@ class OperatorGUI(tk.Tk):
         self._set_text(self.summary_text, "\n".join(format_summary_lines(self.state)))
         self._set_listbox(self.log_list, collect_recent_log_lines(self.state))
         self._set_listbox(self.intake_list, collect_intake_log_lines(self.state))
+        self._set_listbox(self.battle_list, collect_battle_trace_lines(self.state))
 
         for player_id in (AI_PLAYER, HUMAN_PLAYER):
             player = self.state["players"][player_id]

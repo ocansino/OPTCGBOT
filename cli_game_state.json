@@ -1,25 +1,25 @@
 {
-  "turn": 4,
+  "turn": 12,
   "active_player": "P2",
   "first_player": "P1",
   "phase": "main",
-  "winner": null,
+  "winner": "P2",
+  "battle_context": null,
   "logs": [
     {
       "turn": 1,
       "phase": "main",
       "player": "P1",
       "action": {
-        "type": "play_card",
+        "type": "attach_don",
         "payload": {
-          "card_id": "P1-CARD-006"
+          "card_id": "P1-LEADER",
+          "amount": 1
         }
       },
       "result": {
-        "played": "OP12-098",
-        "destination": "trash",
-        "paid_cost": 1,
-        "effect_resolved": false
+        "attached_to": "P1-LEADER",
+        "amount": 1
       }
     },
     {
@@ -32,6 +32,36 @@
       },
       "result": {
         "ended_turn": true
+      }
+    },
+    {
+      "turn": 2,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P2-CARD-005"
+        }
+      },
+      "result": {
+        "played": "OP12-097",
+        "destination": "trash",
+        "paid_cost": 1,
+        "effect_resolved": true,
+        "effect_result": {
+          "looked_at": [
+            "P2-CARD-011",
+            "P2-CARD-012",
+            "P2-CARD-013"
+          ],
+          "added": "P2-CARD-013",
+          "trashed": [
+            "P2-CARD-011",
+            "P2-CARD-012"
+          ],
+          "effect": "OP12-097"
+        }
       }
     },
     {
@@ -73,72 +103,1575 @@
       "result": {
         "ended_turn": true
       }
+    },
+    {
+      "turn": 4,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-LEADER",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 5000,
+        "defender_power": 6000,
+        "blocked_or_countered": true,
+        "won_game": false,
+        "defense": {
+          "blocker_id": null,
+          "counters": [
+            {
+              "used_counter": "P1-CARD-005",
+              "card_id": "OP12-089",
+              "target": "P1-LEADER",
+              "power_bonus": 1000
+            }
+          ]
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 4,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-LEADER",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-LEADER",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [
+                "P1-CARD-005",
+                "P1-CARD-006",
+                "P1-CARD-007",
+                "P1-CARD-009",
+                "P1-CARD-010"
+              ],
+              "planned_counters": [
+                "P1-CARD-005"
+              ],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_used": "P1-CARD-005",
+              "target_after_counter": "P1-LEADER",
+              "target_power_after_counter": 6000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 5000,
+              "defender_power": 6000
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "blocked_or_countered"
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "blocked_or_countered": true
+            }
+          ],
+          "status": "blocked_or_countered"
+        }
+      }
+    },
+    {
+      "turn": 4,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P2-CARD-013"
+        }
+      },
+      "result": {
+        "played": "EB03-042",
+        "destination": "board",
+        "board_count": 1,
+        "paid_cost": 4
+      }
+    },
+    {
+      "turn": 4,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 5,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P1-CARD-007"
+        }
+      },
+      "result": {
+        "played": "OP12-093",
+        "destination": "board",
+        "board_count": 1,
+        "paid_cost": 4
+      }
+    },
+    {
+      "turn": 5,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 6,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-LEADER",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 5000,
+        "defender_power": 7000,
+        "blocked_or_countered": true,
+        "won_game": false,
+        "defense": {
+          "blocker_id": null,
+          "counters": [
+            {
+              "used_counter": "P1-CARD-009",
+              "card_id": "OP12-112",
+              "target": "P1-LEADER",
+              "power_bonus": 2000
+            }
+          ]
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 6,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-LEADER",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-LEADER",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [
+                "P1-CARD-006",
+                "P1-CARD-009",
+                "P1-CARD-010"
+              ],
+              "planned_counters": [
+                "P1-CARD-009"
+              ],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_used": "P1-CARD-009",
+              "target_after_counter": "P1-LEADER",
+              "target_power_after_counter": 7000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 5000,
+              "defender_power": 7000
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "blocked_or_countered"
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "blocked_or_countered": true
+            }
+          ],
+          "status": "blocked_or_countered"
+        }
+      }
+    },
+    {
+      "turn": 6,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-CARD-013",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 5000,
+        "defender_power": 7000,
+        "blocked_or_countered": true,
+        "won_game": false,
+        "defense": {
+          "blocker_id": null,
+          "counters": [
+            {
+              "used_counter": "P1-CARD-010",
+              "card_id": "OP12-112",
+              "target": "P1-LEADER",
+              "power_bonus": 2000
+            }
+          ]
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 6,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-CARD-013",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-CARD-013",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [
+                "P1-CARD-006",
+                "P1-CARD-010"
+              ],
+              "planned_counters": [
+                "P1-CARD-010"
+              ],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_used": "P1-CARD-010",
+              "target_after_counter": "P1-LEADER",
+              "target_power_after_counter": 7000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 5000,
+              "defender_power": 7000
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "blocked_or_countered"
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "blocked_or_countered": true
+            }
+          ],
+          "status": "blocked_or_countered"
+        }
+      }
+    },
+    {
+      "turn": 6,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P2-CARD-007"
+        }
+      },
+      "result": {
+        "played": "OP12-119",
+        "destination": "board",
+        "board_count": 2,
+        "paid_cost": 6,
+        "effect_result": {
+          "effect": "OP12-119",
+          "discarded_for_cost": [
+            "P2-CARD-008"
+          ],
+          "added_to_life": [
+            "P2-CARD-016"
+          ],
+          "temporary_cost_bonus": 2
+        },
+        "effect_resolved": true
+      }
+    },
+    {
+      "turn": 6,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 7,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P1-CARD-008"
+        }
+      },
+      "result": {
+        "played": "OP12-087",
+        "destination": "board",
+        "board_count": 2,
+        "paid_cost": 6,
+        "effect_result": {
+          "effect": "OP12-087",
+          "discarded_for_cost": [
+            "P1-CARD-011"
+          ],
+          "opponent_discarded": [
+            "P2-CARD-014",
+            "P2-CARD-015"
+          ]
+        },
+        "effect_resolved": true
+      }
+    },
+    {
+      "turn": 7,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 8,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P2-CARD-009"
+        }
+      },
+      "result": {
+        "played": "OP12-086",
+        "destination": "board",
+        "board_count": 3,
+        "paid_cost": 1,
+        "effect_result": {
+          "looked_at": [
+            "P2-CARD-018",
+            "P2-CARD-019",
+            "P2-CARD-020"
+          ],
+          "added": "P2-CARD-019",
+          "trashed": [
+            "P2-CARD-018",
+            "P2-CARD-020"
+          ],
+          "effect": "OP12-086"
+        },
+        "effect_resolved": true
+      }
+    },
+    {
+      "turn": 8,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P2-CARD-019"
+        }
+      },
+      "result": {
+        "played": "OP12-119",
+        "destination": "board",
+        "board_count": 4,
+        "paid_cost": 6,
+        "effect_result": {
+          "effect": "OP12-119",
+          "discarded_for_cost": [
+            "P2-CARD-010"
+          ],
+          "added_to_life": [
+            "P2-CARD-021"
+          ],
+          "temporary_cost_bonus": 2
+        },
+        "effect_resolved": true
+      }
+    },
+    {
+      "turn": 8,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-LEADER",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "P1-CARD-008",
+        "attacker_power": 5000,
+        "defender_power": 7000,
+        "ko": false,
+        "defense": {
+          "blocker_id": "P1-CARD-008",
+          "counters": []
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 8,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-LEADER",
+          "original_target": "leader",
+          "current_target": "P1-CARD-008",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-LEADER",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "P1-CARD-008",
+              "blocker_options": [
+                "P1-CARD-008"
+              ],
+              "chosen_blocker": "P1-CARD-008",
+              "attacker_power": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "P1-CARD-008",
+              "counter_options": [
+                "P1-CARD-006",
+                "P1-CARD-012"
+              ],
+              "planned_counters": [],
+              "target_power_before_counters": 7000
+            },
+            {
+              "stage": "ko_resolution",
+              "current_target": "P1-CARD-008",
+              "attacker_power": 5000,
+              "defender_power": 7000,
+              "ko": false
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "P1-CARD-008",
+              "cleanup_reason": "character_battle_complete",
+              "ko": false
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "P1-CARD-008",
+              "ko": false
+            }
+          ],
+          "status": "battle_complete"
+        }
+      }
+    },
+    {
+      "turn": 8,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attach_don",
+        "payload": {
+          "card_id": "P2-CARD-007",
+          "amount": 1
+        }
+      },
+      "result": {
+        "attached_to": "P2-CARD-007",
+        "amount": 1
+      }
+    },
+    {
+      "turn": 8,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-CARD-013",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 5000,
+        "defender_power": 6000,
+        "blocked_or_countered": true,
+        "won_game": false,
+        "defense": {
+          "blocker_id": null,
+          "counters": [
+            {
+              "used_counter": "P1-CARD-012",
+              "card_id": "OP12-119",
+              "target": "P1-LEADER",
+              "power_bonus": 1000
+            }
+          ]
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 8,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-CARD-013",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-CARD-013",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [
+                "P1-CARD-006",
+                "P1-CARD-012"
+              ],
+              "planned_counters": [
+                "P1-CARD-012"
+              ],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_used": "P1-CARD-012",
+              "target_after_counter": "P1-LEADER",
+              "target_power_after_counter": 6000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 5000,
+              "defender_power": 6000
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "blocked_or_countered"
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "blocked_or_countered": true
+            }
+          ],
+          "status": "blocked_or_countered"
+        }
+      }
+    },
+    {
+      "turn": 8,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-CARD-007",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 8000,
+        "defender_power": 9000,
+        "blocked_or_countered": true,
+        "won_game": false,
+        "defense": {
+          "blocker_id": null,
+          "counters": [
+            {
+              "used_counter": "P1-CARD-006",
+              "card_id": "OP12-098",
+              "target": "P1-LEADER",
+              "power_bonus": 4000
+            }
+          ]
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 8,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-CARD-007",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-CARD-007",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 8000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [
+                "P1-CARD-006"
+              ],
+              "planned_counters": [
+                "P1-CARD-006"
+              ],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_used": "P1-CARD-006",
+              "target_after_counter": "P1-LEADER",
+              "target_power_after_counter": 9000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 8000,
+              "defender_power": 9000
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "blocked_or_countered"
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "blocked_or_countered": true
+            }
+          ],
+          "status": "blocked_or_countered"
+        }
+      }
+    },
+    {
+      "turn": 8,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 9,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P1-CARD-013"
+        }
+      },
+      "result": {
+        "played": "OP12-112",
+        "destination": "board",
+        "board_count": 3,
+        "paid_cost": 4
+      }
+    },
+    {
+      "turn": 9,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 10,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-LEADER",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "P1-CARD-008",
+        "attacker_power": 5000,
+        "defender_power": 7000,
+        "ko": false,
+        "defense": {
+          "blocker_id": "P1-CARD-008",
+          "counters": []
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 10,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-LEADER",
+          "original_target": "leader",
+          "current_target": "P1-CARD-008",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-LEADER",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "P1-CARD-008",
+              "blocker_options": [
+                "P1-CARD-008"
+              ],
+              "chosen_blocker": "P1-CARD-008",
+              "attacker_power": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "P1-CARD-008",
+              "counter_options": [],
+              "planned_counters": [],
+              "target_power_before_counters": 7000
+            },
+            {
+              "stage": "ko_resolution",
+              "current_target": "P1-CARD-008",
+              "attacker_power": 5000,
+              "defender_power": 7000,
+              "ko": false
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "P1-CARD-008",
+              "cleanup_reason": "character_battle_complete",
+              "ko": false
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "P1-CARD-008",
+              "ko": false
+            }
+          ],
+          "status": "battle_complete"
+        }
+      }
+    },
+    {
+      "turn": 10,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-CARD-007",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 7000,
+        "life_after": 3,
+        "won_game": false,
+        "life_to_hand": [
+          "P1-CARD-001"
+        ],
+        "trigger_result": null,
+        "defender_power": 5000,
+        "defense": {
+          "blocker_id": null,
+          "counters": []
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 10,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-CARD-007",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-CARD-007",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 7000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [],
+              "planned_counters": [],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 7000,
+              "defender_power": 5000
+            },
+            {
+              "stage": "trigger_window",
+              "current_target": "leader",
+              "revealed_life": "P1-CARD-001",
+              "trigger_available": true,
+              "trigger_chosen": false
+            },
+            {
+              "stage": "trigger_window",
+              "current_target": "leader",
+              "revealed_life": "P1-CARD-001",
+              "resolution": "hand",
+              "triggered_card_id": "OP12-094"
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "life_damage_resolved",
+              "triggered": false
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "life_after": 3,
+              "triggered": false
+            }
+          ],
+          "status": "damage_resolved"
+        }
+      }
+    },
+    {
+      "turn": 10,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-CARD-013",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 5000,
+        "life_after": 2,
+        "won_game": false,
+        "life_to_hand": [
+          "P1-CARD-002"
+        ],
+        "trigger_result": null,
+        "defender_power": 5000,
+        "defense": {
+          "blocker_id": null,
+          "counters": []
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 10,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-CARD-013",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-CARD-013",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [],
+              "planned_counters": [],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 5000,
+              "defender_power": 5000
+            },
+            {
+              "stage": "trigger_window",
+              "current_target": "leader",
+              "revealed_life": "P1-CARD-002",
+              "trigger_available": true,
+              "trigger_chosen": false
+            },
+            {
+              "stage": "trigger_window",
+              "current_target": "leader",
+              "revealed_life": "P1-CARD-002",
+              "resolution": "hand",
+              "triggered_card_id": "OP12-119"
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "life_damage_resolved",
+              "triggered": false
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "life_after": 2,
+              "triggered": false
+            }
+          ],
+          "status": "damage_resolved"
+        }
+      }
+    },
+    {
+      "turn": 10,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-CARD-009",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 2000,
+        "defender_power": 5000,
+        "blocked_or_countered": true,
+        "won_game": false,
+        "defense": {
+          "blocker_id": null,
+          "counters": []
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 10,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-CARD-009",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-CARD-009",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 2000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [
+                "P1-CARD-002"
+              ],
+              "planned_counters": [],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 2000,
+              "defender_power": 5000
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "blocked_or_countered"
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "blocked_or_countered": true
+            }
+          ],
+          "status": "blocked_or_countered"
+        }
+      }
+    },
+    {
+      "turn": 10,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-CARD-019",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 7000,
+        "life_after": 1,
+        "won_game": false,
+        "life_to_hand": [
+          "P1-CARD-003"
+        ],
+        "trigger_result": null,
+        "defender_power": 5000,
+        "defense": {
+          "blocker_id": null,
+          "counters": []
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 10,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-CARD-019",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-CARD-019",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 7000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [
+                "P1-CARD-002"
+              ],
+              "planned_counters": [],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 7000,
+              "defender_power": 5000
+            },
+            {
+              "stage": "trigger_window",
+              "current_target": "leader",
+              "revealed_life": "P1-CARD-003",
+              "trigger_available": true,
+              "trigger_chosen": false
+            },
+            {
+              "stage": "trigger_window",
+              "current_target": "leader",
+              "revealed_life": "P1-CARD-003",
+              "resolution": "hand",
+              "triggered_card_id": "OP12-087"
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "life_damage_resolved",
+              "triggered": false
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "life_after": 1,
+              "triggered": false
+            }
+          ],
+          "status": "damage_resolved"
+        }
+      }
+    },
+    {
+      "turn": 10,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P2-CARD-022"
+        }
+      },
+      "result": {
+        "played": "OP12-087",
+        "destination": "board",
+        "board_count": 5,
+        "paid_cost": 6,
+        "effect_result": {
+          "effect": "OP12-087",
+          "skipped": "opponent_hand_below_five"
+        },
+        "effect_resolved": true
+      }
+    },
+    {
+      "turn": 10,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 11,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "play_card",
+        "payload": {
+          "card_id": "P1-CARD-001"
+        }
+      },
+      "result": {
+        "played": "OP12-094",
+        "destination": "board",
+        "board_count": 4,
+        "paid_cost": 8,
+        "effect_result": {
+          "effect": "OP12-094",
+          "recycled": [
+            "P1-CARD-012",
+            "P1-CARD-005",
+            "P1-CARD-006"
+          ],
+          "played_from_trash": "P1-CARD-009",
+          "leader_reaction": {
+            "effect": "OP12-081",
+            "life_to_hand": [
+              "P1-CARD-004"
+            ],
+            "target_player": "P1"
+          }
+        },
+        "effect_resolved": true,
+        "leader_reaction": {
+          "effect": "OP12-081",
+          "skipped": "already_used_this_turn"
+        }
+      }
+    },
+    {
+      "turn": 11,
+      "phase": "main",
+      "player": "P1",
+      "action": {
+        "type": "end_turn",
+        "payload": {}
+      },
+      "result": {
+        "ended_turn": true
+      }
+    },
+    {
+      "turn": 12,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-LEADER",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "P1-CARD-008",
+        "attacker_power": 5000,
+        "defender_power": 7000,
+        "ko": false,
+        "defense": {
+          "blocker_id": "P1-CARD-008",
+          "counters": []
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 12,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-LEADER",
+          "original_target": "leader",
+          "current_target": "P1-CARD-008",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-LEADER",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "P1-CARD-008",
+              "blocker_options": [
+                "P1-CARD-008"
+              ],
+              "chosen_blocker": "P1-CARD-008",
+              "attacker_power": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "P1-CARD-008",
+              "counter_options": [
+                "P1-CARD-002",
+                "P1-CARD-014",
+                "P1-CARD-004"
+              ],
+              "planned_counters": [],
+              "target_power_before_counters": 7000
+            },
+            {
+              "stage": "ko_resolution",
+              "current_target": "P1-CARD-008",
+              "attacker_power": 5000,
+              "defender_power": 7000,
+              "ko": false
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "P1-CARD-008",
+              "cleanup_reason": "character_battle_complete",
+              "ko": false
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "P1-CARD-008",
+              "ko": false
+            }
+          ],
+          "status": "battle_complete"
+        }
+      }
+    },
+    {
+      "turn": 12,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-CARD-013",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 5000,
+        "defender_power": 6000,
+        "blocked_or_countered": true,
+        "won_game": false,
+        "defense": {
+          "blocker_id": null,
+          "counters": [
+            {
+              "used_counter": "P1-CARD-014",
+              "card_id": "OP12-089",
+              "target": "P1-LEADER",
+              "power_bonus": 1000
+            }
+          ]
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 12,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-CARD-013",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-CARD-013",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [
+                "P1-CARD-002",
+                "P1-CARD-014",
+                "P1-CARD-004"
+              ],
+              "planned_counters": [
+                "P1-CARD-014"
+              ],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_used": "P1-CARD-014",
+              "target_after_counter": "P1-LEADER",
+              "target_power_after_counter": 6000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 5000,
+              "defender_power": 6000
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "blocked_or_countered"
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "blocked_or_countered": true
+            }
+          ],
+          "status": "blocked_or_countered"
+        }
+      }
+    },
+    {
+      "turn": 12,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attach_don",
+        "payload": {
+          "card_id": "P2-CARD-007",
+          "amount": 10
+        }
+      },
+      "result": {
+        "attached_to": "P2-CARD-007",
+        "amount": 10
+      }
+    },
+    {
+      "turn": 12,
+      "phase": "main",
+      "player": "P2",
+      "action": {
+        "type": "attack",
+        "payload": {
+          "attacker_id": "P2-CARD-007",
+          "target": "leader"
+        }
+      },
+      "result": {
+        "target": "leader",
+        "final_target": "leader",
+        "attacker_power": 17000,
+        "defender_power": 5000,
+        "life_after": 0,
+        "won_game": true,
+        "defense": {
+          "blocker_id": null,
+          "counters": []
+        },
+        "battle_context": {
+          "active": true,
+          "turn": 12,
+          "attacking_player": "P2",
+          "defending_player": "P1",
+          "attacker_id": "P2-CARD-007",
+          "original_target": "leader",
+          "current_target": "leader",
+          "stage": "cleanup",
+          "events": [
+            {
+              "stage": "declare_attack",
+              "attacker_id": "P2-CARD-007",
+              "target": "leader"
+            },
+            {
+              "stage": "blocker_window",
+              "current_target": "leader",
+              "blocker_options": [],
+              "chosen_blocker": null,
+              "attacker_power": 17000
+            },
+            {
+              "stage": "counter_window",
+              "current_target": "leader",
+              "counter_options": [
+                "P1-CARD-002",
+                "P1-CARD-004"
+              ],
+              "planned_counters": [],
+              "target_power_before_counters": 5000
+            },
+            {
+              "stage": "damage_resolution",
+              "current_target": "leader",
+              "attacker_power": 17000,
+              "defender_power": 5000
+            },
+            {
+              "stage": "cleanup",
+              "final_target": "leader",
+              "cleanup_reason": "game_won"
+            },
+            {
+              "stage": "battle_complete",
+              "final_target": "leader",
+              "won_game": true
+            }
+          ],
+          "status": "game_won"
+        }
+      }
     }
   ],
   "players": {
     "P1": {
-      "life": 4,
+      "life": 0,
       "deck": [
-        {
-          "instance_id": "P1-CARD-011",
-          "card_id": "OP12-097",
-          "name": "Captains Assembled",
-          "category": "Event",
-          "cost": 1,
-          "base_cost": 1,
-          "power": 0,
-          "counter": null,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P1-CARD-012",
-          "card_id": "OP12-119",
-          "name": "Bartholomew Kuma",
-          "category": "Character",
-          "cost": 6,
-          "base_cost": 6,
-          "power": 7000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P1-CARD-013",
-          "card_id": "OP12-112",
-          "name": "Baby 5",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 2000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P1-CARD-014",
-          "card_id": "OP12-089",
-          "name": "Hack",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
         {
           "instance_id": "P1-CARD-015",
           "card_id": "OP12-086",
@@ -678,9 +2211,22 @@
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
-        }
-      ],
-      "hand": [
+        },
+        {
+          "instance_id": "P1-CARD-012",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "base_cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
         {
           "instance_id": "P1-CARD-005",
           "card_id": "OP12-089",
@@ -697,69 +2243,6 @@
           "temporary_cost_bonus_expires": null
         },
         {
-          "instance_id": "P1-CARD-007",
-          "card_id": "OP12-093",
-          "name": "Morley",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 2000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P1-CARD-008",
-          "card_id": "OP12-087",
-          "name": "Nico Robin",
-          "category": "Character",
-          "cost": 6,
-          "base_cost": 6,
-          "power": 7000,
-          "counter": null,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P1-CARD-009",
-          "card_id": "OP12-112",
-          "name": "Baby 5",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 2000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P1-CARD-010",
-          "card_id": "OP12-112",
-          "name": "Baby 5",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 2000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        }
-      ],
-      "board": [],
-      "trash": [
-        {
           "instance_id": "P1-CARD-006",
           "card_id": "OP12-098",
           "name": "Hair Removal Fist",
@@ -769,28 +2252,13 @@
           "power": 0,
           "counter": null,
           "state": "active",
-          "played_turn": 1,
+          "played_turn": null,
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         }
       ],
-      "life_cards": [
-        {
-          "instance_id": "P1-CARD-001",
-          "card_id": "OP12-094",
-          "name": "Monkey.D.Dragon",
-          "category": "Character",
-          "cost": 8,
-          "base_cost": 8,
-          "power": 8000,
-          "counter": null,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
+      "hand": [
         {
           "instance_id": "P1-CARD-002",
           "card_id": "OP12-119",
@@ -837,64 +2305,9 @@
           "temporary_cost_bonus_expires": null
         }
       ],
-      "don_deck": [
-        "P1-DON-04",
-        "P1-DON-05",
-        "P1-DON-06",
-        "P1-DON-07",
-        "P1-DON-08",
-        "P1-DON-09",
-        "P1-DON-10"
-      ],
-      "don_area": [],
-      "spent_don": [],
-      "attached_don": {
-        "P1-LEADER": 3
-      },
-      "leader": {
-        "instance_id": "P1-LEADER",
-        "card_id": "OP12-081",
-        "name": "Koala",
-        "power": 5000,
-        "state": "active"
-      },
-      "turn_flags": {}
-    },
-    "P2": {
-      "life": 4,
-      "deck": [
+      "board": [
         {
-          "instance_id": "P2-CARD-012",
-          "card_id": "PRB02-014",
-          "name": "Sabo",
-          "category": "Character",
-          "cost": 6,
-          "base_cost": 6,
-          "power": 6000,
-          "counter": 2000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-013",
-          "card_id": "EB03-042",
-          "name": "Koala",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-014",
+          "instance_id": "P1-CARD-007",
           "card_id": "OP12-093",
           "name": "Morley",
           "category": "Character",
@@ -903,103 +2316,43 @@
           "power": 5000,
           "counter": 2000,
           "state": "active",
-          "played_turn": null,
+          "played_turn": 5,
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
         {
-          "instance_id": "P2-CARD-015",
-          "card_id": "OP10-109",
-          "name": "Basil Hawkins",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-016",
-          "card_id": "OP12-097",
-          "name": "Captains Assembled",
-          "category": "Event",
-          "cost": 1,
-          "base_cost": 1,
-          "power": 0,
-          "counter": null,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-017",
-          "card_id": "OP12-098",
-          "name": "Hair Removal Fist",
-          "category": "Event",
-          "cost": 1,
-          "base_cost": 1,
-          "power": 0,
-          "counter": null,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-018",
-          "card_id": "OP12-097",
-          "name": "Captains Assembled",
-          "category": "Event",
-          "cost": 1,
-          "base_cost": 1,
-          "power": 0,
-          "counter": null,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-019",
-          "card_id": "OP12-119",
-          "name": "Bartholomew Kuma",
+          "instance_id": "P1-CARD-008",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
           "category": "Character",
           "cost": 6,
           "base_cost": 6,
           "power": 7000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
+          "counter": null,
+          "state": "rested",
+          "played_turn": 7,
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
         {
-          "instance_id": "P2-CARD-020",
-          "card_id": "EB03-053",
-          "name": "Nami",
+          "instance_id": "P1-CARD-013",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
           "category": "Character",
-          "cost": 5,
-          "base_cost": 5,
-          "power": 6000,
-          "counter": 1000,
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 2000,
           "state": "active",
-          "played_turn": null,
+          "played_turn": 9,
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
         {
-          "instance_id": "P2-CARD-021",
+          "instance_id": "P1-CARD-001",
           "card_id": "OP12-094",
           "name": "Monkey.D.Dragon",
           "category": "Character",
@@ -1008,19 +2361,51 @@
           "power": 8000,
           "counter": null,
           "state": "active",
+          "played_turn": 11,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P1-CARD-009",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": 11,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        }
+      ],
+      "trash": [
+        {
+          "instance_id": "P1-CARD-010",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
           "played_turn": null,
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
         },
         {
-          "instance_id": "P2-CARD-022",
-          "card_id": "OP12-087",
-          "name": "Nico Robin",
-          "category": "Character",
-          "cost": 6,
-          "base_cost": 6,
-          "power": 7000,
+          "instance_id": "P1-CARD-011",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "base_cost": 1,
+          "power": 0,
           "counter": null,
           "state": "active",
           "played_turn": null,
@@ -1029,7 +2414,7 @@
           "temporary_cost_bonus_expires": null
         },
         {
-          "instance_id": "P2-CARD-023",
+          "instance_id": "P1-CARD-014",
           "card_id": "OP12-089",
           "name": "Hack",
           "category": "Character",
@@ -1042,7 +2427,38 @@
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
-        },
+        }
+      ],
+      "life_cards": [],
+      "don_deck": [],
+      "don_area": [
+        "RETURNED-P1-LEADER-2",
+        "P1-DON-10"
+      ],
+      "spent_don": [
+        "RETURNED-P1-LEADER-3",
+        "P1-DON-04",
+        "P1-DON-06",
+        "P1-DON-08",
+        "P1-DON-09",
+        "P1-DON-07",
+        "P1-DON-05",
+        "RETURNED-P1-LEADER-1"
+      ],
+      "attached_don": {},
+      "leader": {
+        "instance_id": "P1-LEADER",
+        "card_id": "OP12-081",
+        "name": "Koala",
+        "power": 5000,
+        "state": "active",
+        "battle_power_bonus": 0
+      },
+      "turn_flags": {}
+    },
+    "P2": {
+      "life": 6,
+      "deck": [
         {
           "instance_id": "P2-CARD-024",
           "card_id": "EB03-053",
@@ -1466,6 +2882,53 @@
           "temporary_cost_bonus_expires": null
         },
         {
+          "instance_id": "P2-CARD-017",
+          "card_id": "OP12-098",
+          "name": "Hair Removal Fist",
+          "category": "Event",
+          "cost": 1,
+          "base_cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-023",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        }
+      ],
+      "board": [
+        {
+          "instance_id": "P2-CARD-013",
+          "card_id": "EB03-042",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "rested",
+          "played_turn": 4,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
           "instance_id": "P2-CARD-007",
           "card_id": "OP12-119",
           "name": "Bartholomew Kuma",
@@ -1474,6 +2937,98 @@
           "base_cost": 6,
           "power": 7000,
           "counter": 1000,
+          "state": "rested",
+          "played_turn": 6,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-009",
+          "card_id": "OP12-086",
+          "name": "Koala",
+          "category": "Character",
+          "cost": 1,
+          "base_cost": 1,
+          "power": 2000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": 8,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-019",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "base_cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": 8,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-022",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "base_cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": 10,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        }
+      ],
+      "trash": [
+        {
+          "instance_id": "P2-CARD-005",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
+          "cost": 1,
+          "base_cost": 1,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": 2,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-011",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-012",
+          "card_id": "PRB02-014",
+          "name": "Sabo",
+          "category": "Character",
+          "cost": 6,
+          "base_cost": 6,
+          "power": 6000,
+          "counter": 2000,
           "state": "active",
           "played_turn": null,
           "battle_power_bonus": 0,
@@ -1496,13 +3051,58 @@
           "temporary_cost_bonus_expires": null
         },
         {
-          "instance_id": "P2-CARD-009",
-          "card_id": "OP12-086",
-          "name": "Koala",
+          "instance_id": "P2-CARD-014",
+          "card_id": "OP12-093",
+          "name": "Morley",
           "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-015",
+          "card_id": "OP10-109",
+          "name": "Basil Hawkins",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-018",
+          "card_id": "OP12-097",
+          "name": "Captains Assembled",
+          "category": "Event",
           "cost": 1,
           "base_cost": 1,
-          "power": 2000,
+          "power": 0,
+          "counter": null,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-020",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "base_cost": 5,
+          "power": 6000,
           "counter": 1000,
           "state": "active",
           "played_turn": null,
@@ -1524,27 +3124,26 @@
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
-        },
+        }
+      ],
+      "life_cards": [
         {
-          "instance_id": "P2-CARD-011",
-          "card_id": "OP12-112",
-          "name": "Baby 5",
+          "instance_id": "P2-CARD-021",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
           "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 2000,
+          "cost": 8,
+          "base_cost": 8,
+          "power": 8000,
+          "counter": null,
           "state": "active",
           "played_turn": null,
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
-        }
-      ],
-      "board": [],
-      "trash": [
+        },
         {
-          "instance_id": "P2-CARD-005",
+          "instance_id": "P2-CARD-016",
           "card_id": "OP12-097",
           "name": "Captains Assembled",
           "category": "Event",
@@ -1553,13 +3152,11 @@
           "power": 0,
           "counter": null,
           "state": "active",
-          "played_turn": 2,
+          "played_turn": null,
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
-        }
-      ],
-      "life_cards": [
+        },
         {
           "instance_id": "P2-CARD-001",
           "card_id": "OP12-089",
@@ -1621,42 +3218,25 @@
           "temporary_cost_bonus_expires": null
         }
       ],
-      "don_deck": [
-        "P2-DON-05",
-        "P2-DON-06",
-        "P2-DON-07",
-        "P2-DON-08",
-        "P2-DON-09",
-        "P2-DON-10"
-      ],
-      "don_area": [
-        "P2-DON-02",
-        "P2-DON-01",
-        "P2-DON-03",
-        "P2-DON-04"
-      ],
+      "don_deck": [],
+      "don_area": [],
       "spent_don": [],
-      "attached_don": {},
+      "attached_don": {
+        "P2-CARD-007": 10
+      },
       "leader": {
         "instance_id": "P2-LEADER",
         "card_id": "OP12-081",
         "name": "Koala",
         "power": 5000,
-        "state": "active"
+        "state": "rested",
+        "battle_power_bonus": 0
       },
       "turn_flags": {}
     }
   },
   "cli_context": {
     "opponent_turn_history": [
-      {
-        "turn": 1,
-        "player": "P2",
-        "phase": "refresh",
-        "status": "active",
-        "events": [],
-        "memory": {}
-      },
       {
         "turn": 2,
         "player": "P2",
@@ -1666,19 +3246,2049 @@
           {
             "index": 1,
             "stage": "turn_start",
-            "summary": "Started operator GUI opponent turn intake after refresh/draw/DON.",
+            "summary": "Started guided opponent turn intake after refresh/draw/DON.",
             "details": {
               "turn": 2,
               "active_player": "P2",
               "phase": "main"
             }
+          },
+          {
+            "index": 2,
+            "stage": "main",
+            "summary": "Played P2-CARD-005",
+            "details": {
+              "action": {
+                "type": "play_card",
+                "payload": {
+                  "card_id": "P2-CARD-005"
+                }
+              }
+            }
+          },
+          {
+            "index": 3,
+            "stage": "end",
+            "summary": "Opponent turn ended.",
+            "details": {
+              "action": {
+                "type": "end_turn",
+                "payload": {}
+              }
+            }
           }
         ],
-        "memory": {},
+        "memory": {
+          "last_played_id": "P2-CARD-005"
+        },
         "final_phase": "end"
       },
       {
         "turn": 4,
+        "player": "P2",
+        "phase": "main",
+        "status": "completed",
+        "events": [
+          {
+            "index": 1,
+            "stage": "turn_start",
+            "summary": "Started guided opponent turn intake after refresh/draw/DON.",
+            "details": {
+              "turn": 4,
+              "active_player": "P2",
+              "phase": "main"
+            }
+          },
+          {
+            "index": 2,
+            "stage": "attack",
+            "summary": "Attack declared with P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 4,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-005",
+                      "P1-CARD-006",
+                      "P1-CARD-007",
+                      "P1-CARD-009",
+                      "P1-CARD-010"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-005"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-005",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 6000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 6000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 4,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-005",
+                      "P1-CARD-006",
+                      "P1-CARD-007",
+                      "P1-CARD-009",
+                      "P1-CARD-010"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-005"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-005",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 6000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 6000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              },
+              "battle_lines": [
+                "Battle | status blocked_or_countered | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- counter_window: current_target=leader, counter_used=P1-CARD-005, target_power=6000",
+                "- damage_resolution: current_target=leader, power=5000v6000",
+                "- cleanup: cleanup_reason=blocked_or_countered",
+                "- battle_complete: blocked_or_countered=True"
+              ]
+            }
+          },
+          {
+            "index": 4,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 5,
+            "stage": "main",
+            "summary": "Played P2-CARD-013",
+            "details": {
+              "action": {
+                "type": "play_card",
+                "payload": {
+                  "card_id": "P2-CARD-013"
+                }
+              }
+            }
+          },
+          {
+            "index": 6,
+            "stage": "end",
+            "summary": "Opponent turn ended.",
+            "details": {
+              "action": {
+                "type": "end_turn",
+                "payload": {}
+              }
+            }
+          }
+        ],
+        "memory": {
+          "last_played_id": "P2-CARD-013"
+        },
+        "final_phase": "end"
+      },
+      {
+        "turn": 6,
+        "player": "P2",
+        "phase": "main",
+        "status": "completed",
+        "events": [
+          {
+            "index": 1,
+            "stage": "turn_start",
+            "summary": "Started guided opponent turn intake after refresh/draw/DON.",
+            "details": {
+              "turn": 6,
+              "active_player": "P2",
+              "phase": "main"
+            }
+          },
+          {
+            "index": 2,
+            "stage": "attack",
+            "summary": "Attack declared with P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 6,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-006",
+                      "P1-CARD-009",
+                      "P1-CARD-010"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-009"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-009",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 7000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 7000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 6,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-006",
+                      "P1-CARD-009",
+                      "P1-CARD-010"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-009"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-009",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 7000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 7000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              },
+              "battle_lines": [
+                "Battle | status blocked_or_countered | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- counter_window: current_target=leader, counter_used=P1-CARD-009, target_power=7000",
+                "- damage_resolution: current_target=leader, power=5000v7000",
+                "- cleanup: cleanup_reason=blocked_or_countered",
+                "- battle_complete: blocked_or_countered=True"
+              ]
+            }
+          },
+          {
+            "index": 4,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 5,
+            "stage": "attack",
+            "summary": "Attack declared with P2-CARD-013 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 6,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-013",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-013",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-006",
+                      "P1-CARD-010"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-010"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-010",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 7000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 7000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              }
+            }
+          },
+          {
+            "index": 6,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-CARD-013 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 6,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-013",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-013",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-006",
+                      "P1-CARD-010"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-010"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-010",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 7000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 7000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              },
+              "battle_lines": [
+                "Battle | status blocked_or_countered | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- counter_window: current_target=leader, counter_used=P1-CARD-010, target_power=7000",
+                "- damage_resolution: current_target=leader, power=5000v7000",
+                "- cleanup: cleanup_reason=blocked_or_countered",
+                "- battle_complete: blocked_or_countered=True"
+              ]
+            }
+          },
+          {
+            "index": 7,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 8,
+            "stage": "main",
+            "summary": "Played P2-CARD-007",
+            "details": {
+              "action": {
+                "type": "play_card",
+                "payload": {
+                  "card_id": "P2-CARD-007"
+                }
+              }
+            }
+          },
+          {
+            "index": 9,
+            "stage": "end",
+            "summary": "Opponent turn ended.",
+            "details": {
+              "action": {
+                "type": "end_turn",
+                "payload": {}
+              }
+            }
+          }
+        ],
+        "memory": {
+          "last_played_id": "P2-CARD-007"
+        },
+        "final_phase": "end"
+      },
+      {
+        "turn": 8,
+        "player": "P2",
+        "phase": "main",
+        "status": "completed",
+        "events": [
+          {
+            "index": 1,
+            "stage": "turn_start",
+            "summary": "Started guided opponent turn intake after refresh/draw/DON.",
+            "details": {
+              "turn": 8,
+              "active_player": "P2",
+              "phase": "main"
+            }
+          },
+          {
+            "index": 2,
+            "stage": "main",
+            "summary": "Played P2-CARD-009",
+            "details": {
+              "action": {
+                "type": "play_card",
+                "payload": {
+                  "card_id": "P2-CARD-009"
+                }
+              }
+            }
+          },
+          {
+            "index": 3,
+            "stage": "main",
+            "summary": "Played P2-CARD-019",
+            "details": {
+              "action": {
+                "type": "play_card",
+                "payload": {
+                  "card_id": "P2-CARD-019"
+                }
+              }
+            }
+          },
+          {
+            "index": 4,
+            "stage": "attack",
+            "summary": "Attack declared with P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 8,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "P1-CARD-008",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "P1-CARD-008",
+                    "blocker_options": [
+                      "P1-CARD-008"
+                    ],
+                    "chosen_blocker": "P1-CARD-008",
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "P1-CARD-008",
+                    "counter_options": [
+                      "P1-CARD-006",
+                      "P1-CARD-012"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 7000
+                  },
+                  {
+                    "stage": "ko_resolution",
+                    "current_target": "P1-CARD-008",
+                    "attacker_power": 5000,
+                    "defender_power": 7000,
+                    "ko": false
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "P1-CARD-008",
+                    "cleanup_reason": "character_battle_complete",
+                    "ko": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "P1-CARD-008",
+                    "ko": false
+                  }
+                ],
+                "status": "battle_complete"
+              }
+            }
+          },
+          {
+            "index": 5,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 8,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "P1-CARD-008",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "P1-CARD-008",
+                    "blocker_options": [
+                      "P1-CARD-008"
+                    ],
+                    "chosen_blocker": "P1-CARD-008",
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "P1-CARD-008",
+                    "counter_options": [
+                      "P1-CARD-006",
+                      "P1-CARD-012"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 7000
+                  },
+                  {
+                    "stage": "ko_resolution",
+                    "current_target": "P1-CARD-008",
+                    "attacker_power": 5000,
+                    "defender_power": 7000,
+                    "ko": false
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "P1-CARD-008",
+                    "cleanup_reason": "character_battle_complete",
+                    "ko": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "P1-CARD-008",
+                    "ko": false
+                  }
+                ],
+                "status": "battle_complete"
+              },
+              "battle_lines": [
+                "Battle | status battle_complete | target P1-CARD-008",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=P1-CARD-008, chosen_blocker=P1-CARD-008",
+                "- counter_window: current_target=P1-CARD-008",
+                "- ko_resolution: current_target=P1-CARD-008, ko=False",
+                "- cleanup: cleanup_reason=character_battle_complete, ko=False",
+                "- battle_complete: ko=False"
+              ]
+            }
+          },
+          {
+            "index": 6,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 7,
+            "stage": "main",
+            "summary": "Attached 1 DON to P2-CARD-007",
+            "details": {
+              "action": {
+                "type": "attach_don",
+                "payload": {
+                  "card_id": "P2-CARD-007",
+                  "amount": 1
+                }
+              }
+            }
+          },
+          {
+            "index": 8,
+            "stage": "attack",
+            "summary": "Attack declared with P2-CARD-013 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 8,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-013",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-013",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-006",
+                      "P1-CARD-012"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-012"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-012",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 6000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 6000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              }
+            }
+          },
+          {
+            "index": 9,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-CARD-013 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 8,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-013",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-013",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-006",
+                      "P1-CARD-012"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-012"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-012",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 6000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 6000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              },
+              "battle_lines": [
+                "Battle | status blocked_or_countered | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- counter_window: current_target=leader, counter_used=P1-CARD-012, target_power=6000",
+                "- damage_resolution: current_target=leader, power=5000v6000",
+                "- cleanup: cleanup_reason=blocked_or_countered",
+                "- battle_complete: blocked_or_countered=True"
+              ]
+            }
+          },
+          {
+            "index": 10,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 11,
+            "stage": "attack",
+            "summary": "Attack declared with P2-CARD-007 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-007",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 8,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-007",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-007",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 8000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-006"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-006"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-006",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 9000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 8000,
+                    "defender_power": 9000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              }
+            }
+          },
+          {
+            "index": 12,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-CARD-007 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-007",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 8,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-007",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-007",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 8000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-006"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-006"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-006",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 9000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 8000,
+                    "defender_power": 9000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              },
+              "battle_lines": [
+                "Battle | status blocked_or_countered | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- counter_window: current_target=leader, counter_used=P1-CARD-006, target_power=9000",
+                "- damage_resolution: current_target=leader, power=8000v9000",
+                "- cleanup: cleanup_reason=blocked_or_countered",
+                "- battle_complete: blocked_or_countered=True"
+              ]
+            }
+          },
+          {
+            "index": 13,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 14,
+            "stage": "end",
+            "summary": "Opponent turn ended.",
+            "details": {
+              "action": {
+                "type": "end_turn",
+                "payload": {}
+              }
+            }
+          }
+        ],
+        "memory": {
+          "last_played_id": "P2-CARD-019",
+          "last_target_id": "P2-CARD-007"
+        },
+        "final_phase": "end"
+      },
+      {
+        "turn": 10,
+        "player": "P2",
+        "phase": "main",
+        "status": "completed",
+        "events": [
+          {
+            "index": 1,
+            "stage": "turn_start",
+            "summary": "Started guided opponent turn intake after refresh/draw/DON.",
+            "details": {
+              "turn": 10,
+              "active_player": "P2",
+              "phase": "main"
+            }
+          },
+          {
+            "index": 2,
+            "stage": "attack",
+            "summary": "Attack declared with P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "P1-CARD-008",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "P1-CARD-008",
+                    "blocker_options": [
+                      "P1-CARD-008"
+                    ],
+                    "chosen_blocker": "P1-CARD-008",
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "P1-CARD-008",
+                    "counter_options": [],
+                    "planned_counters": [],
+                    "target_power_before_counters": 7000
+                  },
+                  {
+                    "stage": "ko_resolution",
+                    "current_target": "P1-CARD-008",
+                    "attacker_power": 5000,
+                    "defender_power": 7000,
+                    "ko": false
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "P1-CARD-008",
+                    "cleanup_reason": "character_battle_complete",
+                    "ko": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "P1-CARD-008",
+                    "ko": false
+                  }
+                ],
+                "status": "battle_complete"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "P1-CARD-008",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "P1-CARD-008",
+                    "blocker_options": [
+                      "P1-CARD-008"
+                    ],
+                    "chosen_blocker": "P1-CARD-008",
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "P1-CARD-008",
+                    "counter_options": [],
+                    "planned_counters": [],
+                    "target_power_before_counters": 7000
+                  },
+                  {
+                    "stage": "ko_resolution",
+                    "current_target": "P1-CARD-008",
+                    "attacker_power": 5000,
+                    "defender_power": 7000,
+                    "ko": false
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "P1-CARD-008",
+                    "cleanup_reason": "character_battle_complete",
+                    "ko": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "P1-CARD-008",
+                    "ko": false
+                  }
+                ],
+                "status": "battle_complete"
+              },
+              "battle_lines": [
+                "Battle | status battle_complete | target P1-CARD-008",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=P1-CARD-008, chosen_blocker=P1-CARD-008",
+                "- counter_window: current_target=P1-CARD-008",
+                "- ko_resolution: current_target=P1-CARD-008, ko=False",
+                "- cleanup: cleanup_reason=character_battle_complete, ko=False",
+                "- battle_complete: ko=False"
+              ]
+            }
+          },
+          {
+            "index": 4,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 5,
+            "stage": "attack",
+            "summary": "Attack declared with P2-CARD-007 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-007",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-007",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-007",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 7000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 7000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-001",
+                    "trigger_available": true,
+                    "trigger_chosen": false
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-001",
+                    "resolution": "hand",
+                    "triggered_card_id": "OP12-094"
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "life_damage_resolved",
+                    "triggered": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "life_after": 3,
+                    "triggered": false
+                  }
+                ],
+                "status": "damage_resolved"
+              }
+            }
+          },
+          {
+            "index": 6,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-CARD-007 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-007",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-007",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-007",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 7000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 7000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-001",
+                    "trigger_available": true,
+                    "trigger_chosen": false
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-001",
+                    "resolution": "hand",
+                    "triggered_card_id": "OP12-094"
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "life_damage_resolved",
+                    "triggered": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "life_after": 3,
+                    "triggered": false
+                  }
+                ],
+                "status": "damage_resolved"
+              },
+              "battle_lines": [
+                "Battle | status damage_resolved | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- damage_resolution: current_target=leader, power=7000v5000",
+                "- trigger_window: current_target=leader, revealed_life=P1-CARD-001, trigger_chosen=False",
+                "- trigger_window: current_target=leader, revealed_life=P1-CARD-001, resolution=hand",
+                "- cleanup: cleanup_reason=life_damage_resolved",
+                "- battle_complete"
+              ]
+            }
+          },
+          {
+            "index": 7,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 8,
+            "stage": "attack",
+            "summary": "Attack declared with P2-CARD-013 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-013",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-013",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-002",
+                    "trigger_available": true,
+                    "trigger_chosen": false
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-002",
+                    "resolution": "hand",
+                    "triggered_card_id": "OP12-119"
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "life_damage_resolved",
+                    "triggered": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "life_after": 2,
+                    "triggered": false
+                  }
+                ],
+                "status": "damage_resolved"
+              }
+            }
+          },
+          {
+            "index": 9,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-CARD-013 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-013",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-013",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-002",
+                    "trigger_available": true,
+                    "trigger_chosen": false
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-002",
+                    "resolution": "hand",
+                    "triggered_card_id": "OP12-119"
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "life_damage_resolved",
+                    "triggered": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "life_after": 2,
+                    "triggered": false
+                  }
+                ],
+                "status": "damage_resolved"
+              },
+              "battle_lines": [
+                "Battle | status damage_resolved | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- damage_resolution: current_target=leader, power=5000v5000",
+                "- trigger_window: current_target=leader, revealed_life=P1-CARD-002, trigger_chosen=False",
+                "- trigger_window: current_target=leader, revealed_life=P1-CARD-002, resolution=hand",
+                "- cleanup: cleanup_reason=life_damage_resolved",
+                "- battle_complete"
+              ]
+            }
+          },
+          {
+            "index": 10,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 11,
+            "stage": "attack",
+            "summary": "Attack declared with P2-CARD-009 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-009",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-009",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-009",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 2000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-002"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 2000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              }
+            }
+          },
+          {
+            "index": 12,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-CARD-009 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-009",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-009",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-009",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 2000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-002"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 2000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              },
+              "battle_lines": [
+                "Battle | status blocked_or_countered | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- damage_resolution: current_target=leader, power=2000v5000",
+                "- cleanup: cleanup_reason=blocked_or_countered",
+                "- battle_complete: blocked_or_countered=True"
+              ]
+            }
+          },
+          {
+            "index": 13,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 14,
+            "stage": "attack",
+            "summary": "Attack declared with P2-CARD-019 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-019",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-019",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-019",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 7000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-002"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 7000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-003",
+                    "trigger_available": true,
+                    "trigger_chosen": false
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-003",
+                    "resolution": "hand",
+                    "triggered_card_id": "OP12-087"
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "life_damage_resolved",
+                    "triggered": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "life_after": 1,
+                    "triggered": false
+                  }
+                ],
+                "status": "damage_resolved"
+              }
+            }
+          },
+          {
+            "index": 15,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-CARD-019 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-019",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 10,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-019",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-019",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 7000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-002"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 7000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-003",
+                    "trigger_available": true,
+                    "trigger_chosen": false
+                  },
+                  {
+                    "stage": "trigger_window",
+                    "current_target": "leader",
+                    "revealed_life": "P1-CARD-003",
+                    "resolution": "hand",
+                    "triggered_card_id": "OP12-087"
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "life_damage_resolved",
+                    "triggered": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "life_after": 1,
+                    "triggered": false
+                  }
+                ],
+                "status": "damage_resolved"
+              },
+              "battle_lines": [
+                "Battle | status damage_resolved | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- damage_resolution: current_target=leader, power=7000v5000",
+                "- trigger_window: current_target=leader, revealed_life=P1-CARD-003, trigger_chosen=False",
+                "- trigger_window: current_target=leader, revealed_life=P1-CARD-003, resolution=hand",
+                "- cleanup: cleanup_reason=life_damage_resolved",
+                "- battle_complete"
+              ]
+            }
+          },
+          {
+            "index": 16,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 17,
+            "stage": "main",
+            "summary": "Played P2-CARD-022",
+            "details": {
+              "action": {
+                "type": "play_card",
+                "payload": {
+                  "card_id": "P2-CARD-022"
+                }
+              }
+            }
+          },
+          {
+            "index": 18,
+            "stage": "end",
+            "summary": "Opponent turn ended.",
+            "details": {
+              "action": {
+                "type": "end_turn",
+                "payload": {}
+              }
+            }
+          }
+        ],
+        "memory": {
+          "last_played_id": "P2-CARD-022"
+        },
+        "final_phase": "end"
+      },
+      {
+        "turn": 12,
         "player": "P2",
         "phase": "main",
         "status": "active",
@@ -1686,19 +5296,501 @@
           {
             "index": 1,
             "stage": "turn_start",
-            "summary": "Started operator GUI opponent turn intake after refresh/draw/DON.",
+            "summary": "Started guided opponent turn intake after refresh/draw/DON.",
             "details": {
-              "turn": 4,
+              "turn": 12,
               "active_player": "P2",
               "phase": "main"
             }
+          },
+          {
+            "index": 2,
+            "stage": "attack",
+            "summary": "Attack declared with P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 12,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "P1-CARD-008",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "P1-CARD-008",
+                    "blocker_options": [
+                      "P1-CARD-008"
+                    ],
+                    "chosen_blocker": "P1-CARD-008",
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "P1-CARD-008",
+                    "counter_options": [
+                      "P1-CARD-002",
+                      "P1-CARD-014",
+                      "P1-CARD-004"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 7000
+                  },
+                  {
+                    "stage": "ko_resolution",
+                    "current_target": "P1-CARD-008",
+                    "attacker_power": 5000,
+                    "defender_power": 7000,
+                    "ko": false
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "P1-CARD-008",
+                    "cleanup_reason": "character_battle_complete",
+                    "ko": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "P1-CARD-008",
+                    "ko": false
+                  }
+                ],
+                "status": "battle_complete"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-LEADER into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 12,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-LEADER",
+                "original_target": "leader",
+                "current_target": "P1-CARD-008",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-LEADER",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "P1-CARD-008",
+                    "blocker_options": [
+                      "P1-CARD-008"
+                    ],
+                    "chosen_blocker": "P1-CARD-008",
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "P1-CARD-008",
+                    "counter_options": [
+                      "P1-CARD-002",
+                      "P1-CARD-014",
+                      "P1-CARD-004"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 7000
+                  },
+                  {
+                    "stage": "ko_resolution",
+                    "current_target": "P1-CARD-008",
+                    "attacker_power": 5000,
+                    "defender_power": 7000,
+                    "ko": false
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "P1-CARD-008",
+                    "cleanup_reason": "character_battle_complete",
+                    "ko": false
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "P1-CARD-008",
+                    "ko": false
+                  }
+                ],
+                "status": "battle_complete"
+              },
+              "battle_lines": [
+                "Battle | status battle_complete | target P1-CARD-008",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=P1-CARD-008, chosen_blocker=P1-CARD-008",
+                "- counter_window: current_target=P1-CARD-008",
+                "- ko_resolution: current_target=P1-CARD-008, ko=False",
+                "- cleanup: cleanup_reason=character_battle_complete, ko=False",
+                "- battle_complete: ko=False"
+              ]
+            }
+          },
+          {
+            "index": 4,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 5,
+            "stage": "attack",
+            "summary": "Attack declared with P2-CARD-013 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 12,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-013",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-013",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-002",
+                      "P1-CARD-014",
+                      "P1-CARD-004"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-014"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-014",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 6000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 6000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              }
+            }
+          },
+          {
+            "index": 6,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-CARD-013 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 12,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-013",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-013",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-002",
+                      "P1-CARD-014",
+                      "P1-CARD-004"
+                    ],
+                    "planned_counters": [
+                      "P1-CARD-014"
+                    ],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_used": "P1-CARD-014",
+                    "target_after_counter": "P1-LEADER",
+                    "target_power_after_counter": 6000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 5000,
+                    "defender_power": 6000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "blocked_or_countered"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "blocked_or_countered": true
+                  }
+                ],
+                "status": "blocked_or_countered"
+              },
+              "battle_lines": [
+                "Battle | status blocked_or_countered | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- counter_window: current_target=leader, counter_used=P1-CARD-014, target_power=6000",
+                "- damage_resolution: current_target=leader, power=5000v6000",
+                "- cleanup: cleanup_reason=blocked_or_countered",
+                "- battle_complete: blocked_or_countered=True"
+              ]
+            }
+          },
+          {
+            "index": 7,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
+          },
+          {
+            "index": 8,
+            "stage": "main",
+            "summary": "Attached 10 DON to P2-CARD-007",
+            "details": {
+              "action": {
+                "type": "attach_don",
+                "payload": {
+                  "card_id": "P2-CARD-007",
+                  "amount": 10
+                }
+              }
+            }
+          },
+          {
+            "index": 9,
+            "stage": "attack",
+            "summary": "Attack declared with P2-CARD-007 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-007",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 12,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-007",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-007",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 17000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-002",
+                      "P1-CARD-004"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 17000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "game_won"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "won_game": true
+                  }
+                ],
+                "status": "game_won"
+              }
+            }
+          },
+          {
+            "index": 10,
+            "stage": "battle_trace",
+            "summary": "Battle trace for P2-CARD-007 into leader",
+            "details": {
+              "action": {
+                "type": "attack",
+                "payload": {
+                  "attacker_id": "P2-CARD-007",
+                  "target": "leader"
+                }
+              },
+              "battle_context": {
+                "active": true,
+                "turn": 12,
+                "attacking_player": "P2",
+                "defending_player": "P1",
+                "attacker_id": "P2-CARD-007",
+                "original_target": "leader",
+                "current_target": "leader",
+                "stage": "cleanup",
+                "events": [
+                  {
+                    "stage": "declare_attack",
+                    "attacker_id": "P2-CARD-007",
+                    "target": "leader"
+                  },
+                  {
+                    "stage": "blocker_window",
+                    "current_target": "leader",
+                    "blocker_options": [],
+                    "chosen_blocker": null,
+                    "attacker_power": 17000
+                  },
+                  {
+                    "stage": "counter_window",
+                    "current_target": "leader",
+                    "counter_options": [
+                      "P1-CARD-002",
+                      "P1-CARD-004"
+                    ],
+                    "planned_counters": [],
+                    "target_power_before_counters": 5000
+                  },
+                  {
+                    "stage": "damage_resolution",
+                    "current_target": "leader",
+                    "attacker_power": 17000,
+                    "defender_power": 5000
+                  },
+                  {
+                    "stage": "cleanup",
+                    "final_target": "leader",
+                    "cleanup_reason": "game_won"
+                  },
+                  {
+                    "stage": "battle_complete",
+                    "final_target": "leader",
+                    "won_game": true
+                  }
+                ],
+                "status": "game_won"
+              },
+              "battle_lines": [
+                "Battle | status game_won | target leader",
+                "- declare_attack: target=leader",
+                "- blocker_window: current_target=leader, chosen_blocker=None",
+                "- counter_window: current_target=leader",
+                "- damage_resolution: current_target=leader, power=17000v5000",
+                "- cleanup: cleanup_reason=game_won",
+                "- battle_complete: won_game=True"
+              ]
+            }
+          },
+          {
+            "index": 11,
+            "stage": "attack",
+            "summary": "Attack sequence confirmed with no extra corrections.",
+            "details": {}
           }
         ],
-        "memory": {}
+        "memory": {
+          "last_target_id": "P2-CARD-007"
+        }
       }
     ],
     "active_opponent_intake": {
-      "turn": 4,
+      "turn": 12,
       "player": "P2",
       "phase": "main",
       "status": "active",
@@ -1706,15 +5798,497 @@
         {
           "index": 1,
           "stage": "turn_start",
-          "summary": "Started operator GUI opponent turn intake after refresh/draw/DON.",
+          "summary": "Started guided opponent turn intake after refresh/draw/DON.",
           "details": {
-            "turn": 4,
+            "turn": 12,
             "active_player": "P2",
             "phase": "main"
           }
+        },
+        {
+          "index": 2,
+          "stage": "attack",
+          "summary": "Attack declared with P2-LEADER into leader",
+          "details": {
+            "action": {
+              "type": "attack",
+              "payload": {
+                "attacker_id": "P2-LEADER",
+                "target": "leader"
+              }
+            },
+            "battle_context": {
+              "active": true,
+              "turn": 12,
+              "attacking_player": "P2",
+              "defending_player": "P1",
+              "attacker_id": "P2-LEADER",
+              "original_target": "leader",
+              "current_target": "P1-CARD-008",
+              "stage": "cleanup",
+              "events": [
+                {
+                  "stage": "declare_attack",
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                },
+                {
+                  "stage": "blocker_window",
+                  "current_target": "P1-CARD-008",
+                  "blocker_options": [
+                    "P1-CARD-008"
+                  ],
+                  "chosen_blocker": "P1-CARD-008",
+                  "attacker_power": 5000
+                },
+                {
+                  "stage": "counter_window",
+                  "current_target": "P1-CARD-008",
+                  "counter_options": [
+                    "P1-CARD-002",
+                    "P1-CARD-014",
+                    "P1-CARD-004"
+                  ],
+                  "planned_counters": [],
+                  "target_power_before_counters": 7000
+                },
+                {
+                  "stage": "ko_resolution",
+                  "current_target": "P1-CARD-008",
+                  "attacker_power": 5000,
+                  "defender_power": 7000,
+                  "ko": false
+                },
+                {
+                  "stage": "cleanup",
+                  "final_target": "P1-CARD-008",
+                  "cleanup_reason": "character_battle_complete",
+                  "ko": false
+                },
+                {
+                  "stage": "battle_complete",
+                  "final_target": "P1-CARD-008",
+                  "ko": false
+                }
+              ],
+              "status": "battle_complete"
+            }
+          }
+        },
+        {
+          "index": 3,
+          "stage": "battle_trace",
+          "summary": "Battle trace for P2-LEADER into leader",
+          "details": {
+            "action": {
+              "type": "attack",
+              "payload": {
+                "attacker_id": "P2-LEADER",
+                "target": "leader"
+              }
+            },
+            "battle_context": {
+              "active": true,
+              "turn": 12,
+              "attacking_player": "P2",
+              "defending_player": "P1",
+              "attacker_id": "P2-LEADER",
+              "original_target": "leader",
+              "current_target": "P1-CARD-008",
+              "stage": "cleanup",
+              "events": [
+                {
+                  "stage": "declare_attack",
+                  "attacker_id": "P2-LEADER",
+                  "target": "leader"
+                },
+                {
+                  "stage": "blocker_window",
+                  "current_target": "P1-CARD-008",
+                  "blocker_options": [
+                    "P1-CARD-008"
+                  ],
+                  "chosen_blocker": "P1-CARD-008",
+                  "attacker_power": 5000
+                },
+                {
+                  "stage": "counter_window",
+                  "current_target": "P1-CARD-008",
+                  "counter_options": [
+                    "P1-CARD-002",
+                    "P1-CARD-014",
+                    "P1-CARD-004"
+                  ],
+                  "planned_counters": [],
+                  "target_power_before_counters": 7000
+                },
+                {
+                  "stage": "ko_resolution",
+                  "current_target": "P1-CARD-008",
+                  "attacker_power": 5000,
+                  "defender_power": 7000,
+                  "ko": false
+                },
+                {
+                  "stage": "cleanup",
+                  "final_target": "P1-CARD-008",
+                  "cleanup_reason": "character_battle_complete",
+                  "ko": false
+                },
+                {
+                  "stage": "battle_complete",
+                  "final_target": "P1-CARD-008",
+                  "ko": false
+                }
+              ],
+              "status": "battle_complete"
+            },
+            "battle_lines": [
+              "Battle | status battle_complete | target P1-CARD-008",
+              "- declare_attack: target=leader",
+              "- blocker_window: current_target=P1-CARD-008, chosen_blocker=P1-CARD-008",
+              "- counter_window: current_target=P1-CARD-008",
+              "- ko_resolution: current_target=P1-CARD-008, ko=False",
+              "- cleanup: cleanup_reason=character_battle_complete, ko=False",
+              "- battle_complete: ko=False"
+            ]
+          }
+        },
+        {
+          "index": 4,
+          "stage": "attack",
+          "summary": "Attack sequence confirmed with no extra corrections.",
+          "details": {}
+        },
+        {
+          "index": 5,
+          "stage": "attack",
+          "summary": "Attack declared with P2-CARD-013 into leader",
+          "details": {
+            "action": {
+              "type": "attack",
+              "payload": {
+                "attacker_id": "P2-CARD-013",
+                "target": "leader"
+              }
+            },
+            "battle_context": {
+              "active": true,
+              "turn": 12,
+              "attacking_player": "P2",
+              "defending_player": "P1",
+              "attacker_id": "P2-CARD-013",
+              "original_target": "leader",
+              "current_target": "leader",
+              "stage": "cleanup",
+              "events": [
+                {
+                  "stage": "declare_attack",
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                },
+                {
+                  "stage": "blocker_window",
+                  "current_target": "leader",
+                  "blocker_options": [],
+                  "chosen_blocker": null,
+                  "attacker_power": 5000
+                },
+                {
+                  "stage": "counter_window",
+                  "current_target": "leader",
+                  "counter_options": [
+                    "P1-CARD-002",
+                    "P1-CARD-014",
+                    "P1-CARD-004"
+                  ],
+                  "planned_counters": [
+                    "P1-CARD-014"
+                  ],
+                  "target_power_before_counters": 5000
+                },
+                {
+                  "stage": "counter_window",
+                  "current_target": "leader",
+                  "counter_used": "P1-CARD-014",
+                  "target_after_counter": "P1-LEADER",
+                  "target_power_after_counter": 6000
+                },
+                {
+                  "stage": "damage_resolution",
+                  "current_target": "leader",
+                  "attacker_power": 5000,
+                  "defender_power": 6000
+                },
+                {
+                  "stage": "cleanup",
+                  "final_target": "leader",
+                  "cleanup_reason": "blocked_or_countered"
+                },
+                {
+                  "stage": "battle_complete",
+                  "final_target": "leader",
+                  "blocked_or_countered": true
+                }
+              ],
+              "status": "blocked_or_countered"
+            }
+          }
+        },
+        {
+          "index": 6,
+          "stage": "battle_trace",
+          "summary": "Battle trace for P2-CARD-013 into leader",
+          "details": {
+            "action": {
+              "type": "attack",
+              "payload": {
+                "attacker_id": "P2-CARD-013",
+                "target": "leader"
+              }
+            },
+            "battle_context": {
+              "active": true,
+              "turn": 12,
+              "attacking_player": "P2",
+              "defending_player": "P1",
+              "attacker_id": "P2-CARD-013",
+              "original_target": "leader",
+              "current_target": "leader",
+              "stage": "cleanup",
+              "events": [
+                {
+                  "stage": "declare_attack",
+                  "attacker_id": "P2-CARD-013",
+                  "target": "leader"
+                },
+                {
+                  "stage": "blocker_window",
+                  "current_target": "leader",
+                  "blocker_options": [],
+                  "chosen_blocker": null,
+                  "attacker_power": 5000
+                },
+                {
+                  "stage": "counter_window",
+                  "current_target": "leader",
+                  "counter_options": [
+                    "P1-CARD-002",
+                    "P1-CARD-014",
+                    "P1-CARD-004"
+                  ],
+                  "planned_counters": [
+                    "P1-CARD-014"
+                  ],
+                  "target_power_before_counters": 5000
+                },
+                {
+                  "stage": "counter_window",
+                  "current_target": "leader",
+                  "counter_used": "P1-CARD-014",
+                  "target_after_counter": "P1-LEADER",
+                  "target_power_after_counter": 6000
+                },
+                {
+                  "stage": "damage_resolution",
+                  "current_target": "leader",
+                  "attacker_power": 5000,
+                  "defender_power": 6000
+                },
+                {
+                  "stage": "cleanup",
+                  "final_target": "leader",
+                  "cleanup_reason": "blocked_or_countered"
+                },
+                {
+                  "stage": "battle_complete",
+                  "final_target": "leader",
+                  "blocked_or_countered": true
+                }
+              ],
+              "status": "blocked_or_countered"
+            },
+            "battle_lines": [
+              "Battle | status blocked_or_countered | target leader",
+              "- declare_attack: target=leader",
+              "- blocker_window: current_target=leader, chosen_blocker=None",
+              "- counter_window: current_target=leader",
+              "- counter_window: current_target=leader, counter_used=P1-CARD-014, target_power=6000",
+              "- damage_resolution: current_target=leader, power=5000v6000",
+              "- cleanup: cleanup_reason=blocked_or_countered",
+              "- battle_complete: blocked_or_countered=True"
+            ]
+          }
+        },
+        {
+          "index": 7,
+          "stage": "attack",
+          "summary": "Attack sequence confirmed with no extra corrections.",
+          "details": {}
+        },
+        {
+          "index": 8,
+          "stage": "main",
+          "summary": "Attached 10 DON to P2-CARD-007",
+          "details": {
+            "action": {
+              "type": "attach_don",
+              "payload": {
+                "card_id": "P2-CARD-007",
+                "amount": 10
+              }
+            }
+          }
+        },
+        {
+          "index": 9,
+          "stage": "attack",
+          "summary": "Attack declared with P2-CARD-007 into leader",
+          "details": {
+            "action": {
+              "type": "attack",
+              "payload": {
+                "attacker_id": "P2-CARD-007",
+                "target": "leader"
+              }
+            },
+            "battle_context": {
+              "active": true,
+              "turn": 12,
+              "attacking_player": "P2",
+              "defending_player": "P1",
+              "attacker_id": "P2-CARD-007",
+              "original_target": "leader",
+              "current_target": "leader",
+              "stage": "cleanup",
+              "events": [
+                {
+                  "stage": "declare_attack",
+                  "attacker_id": "P2-CARD-007",
+                  "target": "leader"
+                },
+                {
+                  "stage": "blocker_window",
+                  "current_target": "leader",
+                  "blocker_options": [],
+                  "chosen_blocker": null,
+                  "attacker_power": 17000
+                },
+                {
+                  "stage": "counter_window",
+                  "current_target": "leader",
+                  "counter_options": [
+                    "P1-CARD-002",
+                    "P1-CARD-004"
+                  ],
+                  "planned_counters": [],
+                  "target_power_before_counters": 5000
+                },
+                {
+                  "stage": "damage_resolution",
+                  "current_target": "leader",
+                  "attacker_power": 17000,
+                  "defender_power": 5000
+                },
+                {
+                  "stage": "cleanup",
+                  "final_target": "leader",
+                  "cleanup_reason": "game_won"
+                },
+                {
+                  "stage": "battle_complete",
+                  "final_target": "leader",
+                  "won_game": true
+                }
+              ],
+              "status": "game_won"
+            }
+          }
+        },
+        {
+          "index": 10,
+          "stage": "battle_trace",
+          "summary": "Battle trace for P2-CARD-007 into leader",
+          "details": {
+            "action": {
+              "type": "attack",
+              "payload": {
+                "attacker_id": "P2-CARD-007",
+                "target": "leader"
+              }
+            },
+            "battle_context": {
+              "active": true,
+              "turn": 12,
+              "attacking_player": "P2",
+              "defending_player": "P1",
+              "attacker_id": "P2-CARD-007",
+              "original_target": "leader",
+              "current_target": "leader",
+              "stage": "cleanup",
+              "events": [
+                {
+                  "stage": "declare_attack",
+                  "attacker_id": "P2-CARD-007",
+                  "target": "leader"
+                },
+                {
+                  "stage": "blocker_window",
+                  "current_target": "leader",
+                  "blocker_options": [],
+                  "chosen_blocker": null,
+                  "attacker_power": 17000
+                },
+                {
+                  "stage": "counter_window",
+                  "current_target": "leader",
+                  "counter_options": [
+                    "P1-CARD-002",
+                    "P1-CARD-004"
+                  ],
+                  "planned_counters": [],
+                  "target_power_before_counters": 5000
+                },
+                {
+                  "stage": "damage_resolution",
+                  "current_target": "leader",
+                  "attacker_power": 17000,
+                  "defender_power": 5000
+                },
+                {
+                  "stage": "cleanup",
+                  "final_target": "leader",
+                  "cleanup_reason": "game_won"
+                },
+                {
+                  "stage": "battle_complete",
+                  "final_target": "leader",
+                  "won_game": true
+                }
+              ],
+              "status": "game_won"
+            },
+            "battle_lines": [
+              "Battle | status game_won | target leader",
+              "- declare_attack: target=leader",
+              "- blocker_window: current_target=leader, chosen_blocker=None",
+              "- counter_window: current_target=leader",
+              "- damage_resolution: current_target=leader, power=17000v5000",
+              "- cleanup: cleanup_reason=game_won",
+              "- battle_complete: won_game=True"
+            ]
+          }
+        },
+        {
+          "index": 11,
+          "stage": "attack",
+          "summary": "Attack sequence confirmed with no extra corrections.",
+          "details": {}
         }
       ],
-      "memory": {}
+      "memory": {
+        "last_target_id": "P2-CARD-007"
+      }
     }
   }
 }

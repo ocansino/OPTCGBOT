@@ -3,6 +3,7 @@ import unittest
 from cli_game import FakePlanningAgent
 from glat_engine import GLATEngine
 from operator_gui import (
+    collect_battle_trace_lines,
     HUMAN_PLAYER,
     collect_intake_log_lines,
     ensure_human_turn_ready,
@@ -53,10 +54,28 @@ class OperatorGuiHelperTests(unittest.TestCase):
         state = self.engine.create_initial_state(seed=7)
         summary_lines = format_summary_lines(state)
         intake_lines = collect_intake_log_lines(state)
+        battle_lines = collect_battle_trace_lines(state)
 
         self.assertTrue(summary_lines)
         self.assertIn("Turn", summary_lines[0])
         self.assertEqual(intake_lines, ["No opponent intake history yet."])
+        self.assertEqual(battle_lines, ["No battle trace yet."])
+
+    def test_collect_battle_trace_lines_after_attack(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = HUMAN_PLAYER
+        state["phase"] = "main"
+        attacker = self.engine.build_card_instance(HUMAN_PLAYER, "OP12-119")
+        attacker["played_turn"] = 2
+        state["players"][HUMAN_PLAYER]["board"] = [attacker]
+
+        changed, _ = process_operator_command(self.engine, state, "attack OP12-119 leader")
+
+        self.assertTrue(changed)
+        battle_lines = collect_battle_trace_lines(state)
+        self.assertTrue(any("Battle | status" in line for line in battle_lines))
+        self.assertTrue(any("damage_resolution" in line or "cleanup" in line for line in battle_lines))
 
 
 if __name__ == "__main__":

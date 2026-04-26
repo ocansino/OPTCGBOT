@@ -4,6 +4,7 @@
   "first_player": "P1",
   "phase": "refresh",
   "winner": null,
+  "battle_context": null,
   "logs": [],
   "players": {
     "P1": {

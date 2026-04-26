@@ -1,7 +1,7 @@
 Grand Line AI Trainer (GLAT)
 Project Design Doc
 
-Last updated: 2026-04-24
+Last updated: 2026-04-25
 
 1. Project Goal
 
@@ -50,6 +50,7 @@ What is already built:
   - engine safely falls back to end_turn when needed
 - both P1 and P2 decks are built from cards.json
 - guided CLI game loop in cli_game.py for real local play/testing
+- local operator GUI in operator_gui.py for match control and intake/testing
 - save/load and mid-game resume support for CLI engine games
 - manual state/effect helpers for:
   - draw
@@ -64,14 +65,23 @@ What is already built:
 - human interactive effect choices in the CLI for search/select effects
 - first trigger/counter helpers for current deck cards
 - scenario-based human turn reporting flow for real physical play
+- shorthand and chained reporting for common opponent actions
+- intake session memory for follow-up references like same attacker / same target / other one
 - guided review/correction tools for reconciling state drift
+- explicit battle-context stages for attacks, including blocker / counter / trigger / cleanup timing
+- battle-trace surfacing in the CLI, intake log, and local operator GUI
+- pressure-test scenarios for full reported turns, blocker redirects, and trigger branches
+- current-scope engine-completeness sweep for supported reaction/effect cards
 - expanded regression coverage in tests/test_glat_engine.py
+- dedicated CLI/operator GUI helper tests for intake and operator flows
 
 Important implementation note:
 - Phase 2 still respects the one-LLM-call-per-turn rule
 - the model does not invent actions or resolve rules
 - the engine remains the single source of truth
-- the current AI path supports short planned sequences, but defense/reactive play is still not implemented
+- the current AI path supports short planned sequences
+- defensive play now has an explicit engine-managed battle flow for the supported scope
+- the remaining gaps are mostly completeness, replay/debugging depth, and broader card/timing coverage
 
 
 3. Current Architecture
@@ -88,6 +98,10 @@ glat_engine.py
   - effect resolution hooks
   - deck-specific on-play and on-KO effects
   - trigger/counter helper actions
+  - explicit battle-context lifecycle during attack resolution
+  - explicit cleanup/finalization for battle resolution
+  - battle-trace data for CLI/GUI/debug surfacing
+  - timing validation for live counter/trigger windows
   - optional effect-choice provider hook for human-controlled choices
 
 referee.py
@@ -110,13 +124,32 @@ cli_game.py
 - supports:
   - AI turns through engine + Gemini/fake AI
   - guided human turn entry
+  - guided opponent-turn intake flow
   - scenario-based physical turn reporting
   - raw command fallback
+  - shorthand/chained report entry
   - manual effect resolution
   - interactive human effect choices
   - trigger/counter activation helpers
   - review/correction tooling
   - save/load resume flow
+
+cli_intake.py
+- extracted intake/session-memory/shorthand parsing layer
+- owns:
+  - opponent intake session lifecycle
+  - shorthand parsing and chaining
+  - conversational follow-up references
+  - intake-oriented command resolution helpers
+  - battle-trace formatting and intake-event logging
+
+operator_gui.py
+- thin local operator panel for:
+  - state inspection
+  - AI turn execution
+  - shorthand intake entry
+  - latest battle trace review
+  - save/load and match control
 
 Older prototype files
 - board_gui.py
@@ -160,16 +193,20 @@ Remaining gaps:
 
 
 Phase C: Human Move Intake
-Status: Strong partial implementation
+Status: Strong implementation for current operator/testing scope
 
 What exists now:
 - guided CLI turn flow for the human player
 - guided opponent-turn intake flow in the CLI for real physical play
+- local operator GUI for report-driven testing and match control
 - raw command fallback
 - manual state correction and effect-resolution tools
 - interactive prompts for human-controlled effect choices on supported cards
 - scenario-driven reporting prompts for common real-table actions
 - life-damage reporting helpers for physical play
+- shorthand reporting for play / attack / attach / counter / trigger / damage / discard / state changes
+- chained shorthand commands
+- session memory for follow-up phrases
 
 Goal:
 - let the human play physically and report their moves
@@ -181,13 +218,13 @@ Needed features:
 - support for effect resolution that depends on hidden zones or player intent
 - correction/reconciliation flow when the physical game and engine state diverge
 - eventually, optional natural-language parsing on top of the structured flow
-- eventual shorthand card-entry flow so the player can report actions primarily by card ID or short text commands
+- ongoing shorthand/reporting refinement so the player can report actions primarily by card ID or short text commands
 
 What is still missing:
-- faster shorthand reporting for common actions after the guided path is stable
-- better prompts for “what happened during this attack?”
-- easier support for hidden information when the human intentionally wants to keep some details unknown to the AI
-- a lightweight text-first intake path where the player can enter compact reports like "played OP12-012"
+- better hidden-information handling when the human intentionally wants to keep some details unknown to the AI
+- richer attack follow-up prompts and clearer correction/reconciliation UX
+- stronger GUI-native intake flows so the operator does not need to rely on text entry for everything
+- more pressure-testing across long real games to expose reporting friction and drift patterns
 
 Recommended approach:
 - do not use free-form natural language first
@@ -197,38 +234,43 @@ Recommended approach:
 
 
 Phase D: Defense / Reaction System
-Status: Implemented for current simplified scope / still incomplete for full OPCG
+Status: In progress, but much closer to stable for the current supported scope
 
 What exists now:
 - manual counter helper for current deck cards
 - manual trigger helper for current deck cards
-- attack declaration now includes:
+- counter events are restricted to opponent-turn defensive timing and cannot be played as normal cards during your own turn
+- attack resolution now maintains an explicit battle context in engine state and logs the current step
+- attack declaration now includes named stages for:
   - blocker window
   - counter window
+  - damage resolution
   - trigger handling on life damage
-  - battle cleanup
+  - KO resolution
+  - cleanup
+- manual counter/trigger helpers now validate against live battle windows when a battle context exists
+- battle traces are surfaced into the CLI, intake history, and operator GUI
 - human defense prompts in CLI
 - deterministic engine-controlled AI defense without extra LLM calls
 
 Still needed for real gameplay:
-- true counter window during attack resolution
-- blocker handling
-- defender decisions
-- attack-step sequencing
+- broader supported edge cases across battle branches for the active deck pool
+- richer defender-choice handling where supported effects create branching decisions
+- fuller timing coverage if the supported deck pool expands
 - optional AI defensive choices
-- proper battle timing and cleanup across all reactions
+- proper battle timing across a wider set of future reactions and cards
 
 Clarification:
-- a basic defense flow now exists
+- a real engine-managed reaction flow now exists
 - what remains is depth/completeness, not starting from zero
 
 Important note:
-- this is now the biggest gameplay gap
-- once this expands, the engine will likely need a more explicit step/timing model rather than only main-phase actions
+- this was the biggest gameplay gap and is now in stabilization territory for the current scope
+- future work here should be targeted completeness work, not another major structural rewrite
 
 
 Phase E: Card Effects
-Status: In progress
+Status: In progress with a stronger current-scope effect baseline
 
 Implemented so far:
 - effect framework inside glat_engine.py
@@ -242,18 +284,23 @@ Implemented so far:
   - OP12-089 Hack
   - OP10-109 Basil Hawkins
   - EB03-042 Koala
+  - EB03-053 Emporio.Ivankov
   - OP12-081 Koala Leader
 - supported trigger/counter helpers for:
   - OP12-098 Hair Removal Fist
   - OP06-115 You're the One Who Should Disappear.
   - OP12-112 Baby 5
+- recent completeness/testing passes now explicitly cover:
+  - EB03-053 on-play behavior
+  - OP10-109 on-KO life trash
+  - EB03-042 on-KO character play
+  - OP06-115 trigger timing
+  - manual trigger timing inside a live trigger window
 
 Still missing:
-- automatic defense timing integration
-- blocker handling
-- many generic timing windows
-- more complete support for optional effects and trigger timing
-- additional card text if the deck changes later
+- many additional card texts if the supported deck pool changes
+- more generic timing-window coverage outside the current tested card set
+- deeper optional-effect handling as more branching effects are added
 
 Needed:
 - effect framework
@@ -269,25 +316,27 @@ Recommended direction:
 
 
 Phase F: Product UI
-Status: CLI operator interface exists; richer UI deferred
+Status: Thin local operator GUI implemented and now useful for battle-trace review; richer board UI deferred
 
 Original idea:
 - Streamlit or lightweight Python UI
 
-Current recommendation:
-- deprioritize table GUI until the engine and human-input flow are stable
-- build a simple operator interface first:
-  - current state snapshot
-  - legal actions for AI
-  - human action input
-  - turn log
-  - error/correction messages
-
-Current best near-term UI:
+What exists now:
 - terminal-driven guided app in cli_game.py
+- local operator control panel in operator_gui.py with:
+  - current state snapshot
+  - AI turn execution
+  - shorthand human/opponent report input
+  - battle trace panel
+  - intake/action log views
+  - save/load and match control
+
+Current recommendation:
+- keep the new local GUI focused on operator/testing workflows
+- do not pivot to a polished table UI until replay/debugging and correction workflows improve further
 
 Next UI option later:
-- simple Streamlit control panel once the gameplay loop is more complete
+- richer local board UI once the gameplay loop is more complete
 
 The old playmat UI can be reused later if desired, but it should not be the main focus now.
 
@@ -329,15 +378,16 @@ Notes:
 
 Recommended next implementation order:
 
-1. Turn the current human reporting flow into a full guided “opponent turn intake” sequence
-2. Add stronger replay/debug tools for saved game logs and state inspection
-3. Move legal action generation closer to engine ownership or formalize its boundary
-4. Continue incremental card-effect support only where needed for the chosen deck
-5. Improve AI planning around effect choices and offensive sequencing
-6. Build a lightweight operator UI around the engine if the CLI becomes limiting
-7. Add post-game review and lesson tracking
-8. Add shorthand opponent-intake syntax and later optional natural-language parsing
-9. Add AI vs AI self-play/training modes on top of the same engine
+Current updated order after the intake/parser/operator-GUI and battle-stabilization milestones:
+- 1. Add stronger replay/debug tools for saved game logs, battle traces, snapshots, and state inspection
+- 2. Improve operator UX for correction, reconciliation, and low-friction real-game reporting
+- 3. Move legal action generation closer to engine ownership or formalize its boundary
+- 4. Continue targeted card-effect support only where needed for the chosen deck or new test scenarios
+- 5. Improve AI planning around effect choices, offensive sequencing, and future defensive choices
+- 6. Keep iterating on the local operator GUI only where it improves real-game testing and debugging
+- 7. Add post-game review and lesson tracking
+- 8. Add AI vs AI self-play/training modes on top of the same engine
+
 
 
 6. Technical Risks
@@ -384,6 +434,11 @@ The next meaningful milestone should be:
 "The player can report an entire real-life turn through a guided flow, the engine can be corrected safely when table state drifts, and the AI can respond from the resumed state without reconstruction work."
 
 That is the point where GLAT becomes a usable real-world training tool instead of only a simulation prototype.
+
+Current assessment:
+- GLAT is now close to that threshold for the currently supported deck/testing scope
+- the engine is no longer the obvious primary bottleneck
+- the biggest remaining work is around replay/debug confidence, operator UX, and broadening supported gameplay coverage carefully
 
 Longer-term success looks like:
 

@@ -353,6 +353,40 @@ class GLATEngineTests(unittest.TestCase):
         self.assertIsNotNone(result["effect_result"]["played_from_trash"])
         self.assertEqual(len(player["board"]), 2)
 
+    def test_op12_094_effect_play_triggers_opponent_leader_reaction(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P2"
+        state["phase"] = "main"
+        player = state["players"]["P2"]
+        opponent = state["players"]["P1"]
+
+        dragon = self.engine.build_card_instance("P2", "OP12-094")
+        trash_a = self.engine.build_card_instance("P2", "OP12-089")
+        trash_b = self.engine.build_card_instance("P2", "OP12-093")
+        trash_c = self.engine.build_card_instance("P2", "PRB02-014")
+        trash_play = self.engine.build_card_instance("P2", "OP12-086")
+
+        player["hand"] = [dragon]
+        player["trash"] = [trash_a, trash_b, trash_c, trash_play]
+        player["deck"] = []
+        player["life_cards"] = [self.engine.build_card_instance("P2", "OP12-086")]
+        player["life"] = 1
+        player["board"] = []
+        player["don_area"] = [f"P2-DON-{index:02d}" for index in range(1, 9)]
+        player["don_deck"] = [f"P2-DON-{index:02d}" for index in range(9, 11)]
+        opponent["leader"]["card_id"] = "OP12-081"
+        opponent["leader"]["name"] = "Koala"
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "play_card", "payload": {"card_id": dragon["instance_id"]}},
+        )
+
+        self.assertEqual(result["effect_result"]["leader_reaction"]["effect"], "OP12-081")
+        self.assertEqual(player["life"], 0)
+        self.assertEqual(len(player["hand"]), 1)
+
     def test_sabo_cost_reduction_uses_trash_count(self) -> None:
         state = self.engine.create_initial_state(seed=7)
         state["turn"] = 4
@@ -466,8 +500,99 @@ class GLATEngineTests(unittest.TestCase):
         self.assertEqual(len(opponent["board"]), 0)
         self.assertEqual(opponent["trash"][-1]["instance_id"], target["instance_id"])
 
+    def test_eb03_053_attaches_spent_don_and_takes_opponent_life(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 4
+        state["active_player"] = "P2"
+        state["phase"] = "main"
+        player = state["players"]["P2"]
+        opponent = state["players"]["P1"]
+
+        card = self.engine.build_card_instance("P2", "EB03-053")
+        player["hand"] = [card]
+        player["board"] = []
+        player["don_area"] = [f"P2-DON-{index:02d}" for index in range(1, 6)]
+        player["spent_don"] = ["P2-SPENT-01"]
+        player["don_deck"] = [f"P2-DON-{index:02d}" for index in range(7, 11)]
+        player["attached_don"] = {}
+        opponent_starting_hand = len(opponent["hand"])
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "play_card", "payload": {"card_id": card["instance_id"]}},
+        )
+
+        self.assertTrue(result["effect_resolved"])
+        self.assertEqual(result["effect_result"]["attached_to"], player["leader"]["instance_id"])
+        self.assertEqual(player["attached_don"][player["leader"]["instance_id"]], 1)
+        self.assertEqual(len(result["effect_result"]["opponent_life_to_hand"]), 1)
+        self.assertEqual(len(opponent["hand"]), opponent_starting_hand + 1)
+
+    def test_op10_109_on_ko_trashes_opponent_life(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 5
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+        attacker_player = state["players"]["P1"]
+        defender_player = state["players"]["P2"]
+
+        attacker = self.engine.build_card_instance("P1", "OP12-119")
+        attacker["played_turn"] = 4
+        hawkins = self.engine.build_card_instance("P2", "OP10-109")
+        hawkins["played_turn"] = 4
+        hawkins["state"] = "rested"
+        starting_life = attacker_player["life"]
+
+        attacker_player["board"] = [attacker]
+        defender_player["board"] = [hawkins]
+        defender_player["hand"] = []
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "attack", "payload": {"attacker_id": attacker["instance_id"], "target": hawkins["instance_id"]}},
+        )
+
+        self.assertTrue(result["ko"])
+        self.assertEqual(result["ko_result"]["effect_result"]["effect"], "OP10-109")
+        self.assertEqual(attacker_player["life"], starting_life - 1)
+        self.assertEqual(len(result["ko_result"]["effect_result"]["trashed_life"]), 1)
+
+    def test_eb03_042_on_ko_can_play_supported_character(self) -> None:
+        engine = SpyEngine(agent=self.agent, effect_choice_provider=choose_by_card_id("OP12-087"))
+        state = engine.create_initial_state(seed=7)
+        state["turn"] = 5
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+        attacker_player = state["players"]["P1"]
+        defender_player = state["players"]["P2"]
+
+        attacker = engine.build_card_instance("P1", "OP12-119")
+        attacker["played_turn"] = 4
+        koala = engine.build_card_instance("P2", "EB03-042")
+        koala["played_turn"] = 4
+        koala["state"] = "rested"
+        robin = engine.build_card_instance("P2", "OP12-087")
+
+        attacker_player["board"] = [attacker]
+        defender_player["board"] = [koala]
+        defender_player["hand"] = [robin]
+        defender_player["trash"] = []
+
+        result = engine.apply_action(
+            state,
+            {"type": "attack", "payload": {"attacker_id": attacker["instance_id"], "target": koala["instance_id"]}},
+        )
+
+        self.assertTrue(result["ko"])
+        self.assertEqual(result["ko_result"]["effect_result"]["effect"], "EB03-042")
+        self.assertEqual(result["ko_result"]["effect_result"]["played"], robin["instance_id"])
+        self.assertTrue(any(card["instance_id"] == robin["instance_id"] for card in defender_player["board"]))
+
     def test_manual_counter_event_adds_battle_power_bonus(self) -> None:
         state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P1"
+        state["phase"] = "main"
         player = state["players"]["P2"]
         target = self.engine.build_card_instance("P2", "OP12-086")
         counter_card = self.engine.build_card_instance("P2", "OP12-098")
@@ -483,6 +608,95 @@ class GLATEngineTests(unittest.TestCase):
         self.assertEqual(result["power_bonus"], 4000)
         self.assertEqual(target["battle_power_bonus"], 4000)
         self.assertEqual(player["trash"][-1]["instance_id"], counter_card["instance_id"])
+
+    def test_character_counter_uses_printed_counter_value_without_extra_multiplier(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+        player = state["players"]["P2"]
+        target = player["leader"]
+        counter_card = self.engine.build_card_instance("P2", "OP12-112")
+        player["hand"] = [counter_card]
+
+        self.engine._open_battle_context(state, state["players"]["P1"]["leader"], "leader")
+        self.engine._advance_battle_context(state, "counter_window", {"current_target": "leader"})
+
+        result = self.engine.manual_use_counter(state, "P2", counter_card["instance_id"], target["instance_id"])
+
+        self.assertEqual(result["power_bonus"], 2000)
+        self.assertEqual(target["battle_power_bonus"], 2000)
+
+    def test_counter_event_cannot_be_played_during_own_turn(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P2"
+        state["phase"] = "main"
+        player = state["players"]["P2"]
+        counter_event = self.engine.build_card_instance("P2", "OP12-098")
+        player["hand"] = [counter_event]
+        player["don_area"] = [f"P2-DON-{index:02d}" for index in range(1, 3)]
+
+        action = {"type": "play_card", "payload": {"card_id": counter_event["instance_id"]}}
+
+        self.assertFalse(self.engine.is_valid_action(state, action))
+        with self.assertRaises(InvalidActionError):
+            self.engine.apply_action(state, action)
+
+    def test_character_with_counter_can_still_be_played_during_own_turn(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P2"
+        state["phase"] = "main"
+        player = state["players"]["P2"]
+        character = self.engine.build_card_instance("P2", "OP12-086")
+        player["hand"] = [character]
+        player["don_area"] = [f"P2-DON-{index:02d}" for index in range(1, 3)]
+
+        action = {"type": "play_card", "payload": {"card_id": character["instance_id"]}}
+
+        self.assertTrue(self.engine.is_valid_action(state, action))
+
+    def test_manual_counter_cannot_be_used_during_your_own_turn(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P2"
+        state["phase"] = "main"
+        player = state["players"]["P2"]
+        target = self.engine.build_card_instance("P2", "OP12-086")
+        counter_card = self.engine.build_card_instance("P2", "OP12-098")
+        player["board"] = [target]
+        player["hand"] = [counter_card]
+
+        with self.assertRaises(ValueError):
+            self.engine.manual_use_counter(state, "P2", counter_card["instance_id"], target["instance_id"])
+
+    def test_manual_counter_requires_counter_window_if_battle_context_exists(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+        player = state["players"]["P2"]
+        target = self.engine.build_card_instance("P2", "OP12-086")
+        attacker = self.engine.build_card_instance("P1", "OP12-119")
+        counter_card = self.engine.build_card_instance("P2", "OP12-098")
+        player["board"] = [target]
+        player["hand"] = [counter_card]
+        state["battle_context"] = {
+            "active": True,
+            "turn": state["turn"],
+            "attacking_player": "P1",
+            "defending_player": "P2",
+            "attacker_id": attacker["instance_id"],
+            "original_target": target["instance_id"],
+            "current_target": target["instance_id"],
+            "stage": "blocker_window",
+            "events": [],
+            "status": "in_progress",
+        }
+
+        with self.assertRaises(ValueError):
+            self.engine.manual_use_counter(state, "P2", counter_card["instance_id"], target["instance_id"])
 
     def test_manual_trigger_op12_112_draws_two(self) -> None:
         state = self.engine.create_initial_state(seed=7)
@@ -502,6 +716,78 @@ class GLATEngineTests(unittest.TestCase):
         self.assertEqual(len(result["effect_result"]["drawn"]), 2)
         self.assertEqual(len(player["hand"]), starting_hand + 2)
         self.assertEqual(player["life"], 3)
+
+    def test_manual_trigger_op06_115_adds_life_and_discards(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        player = state["players"]["P2"]
+        trigger_card = player["life_cards"][0]
+        trigger_card["card_id"] = "OP06-115"
+        trigger_card["name"] = "You're the One Who Should Disappear."
+        player["life_cards"] = [trigger_card]
+        player["life"] = 1
+        top_deck = self.engine.build_card_instance("P2", "OP12-086")
+        discard_card = self.engine.build_card_instance("P2", "OP12-093")
+        player["deck"] = [top_deck] + player["deck"]
+        player["hand"] = [discard_card]
+
+        result = self.engine.manual_activate_trigger(state, "P2", trigger_card["instance_id"])
+
+        self.assertEqual(result["effect_result"]["effect"], "OP06-115")
+        self.assertEqual(result["effect_result"]["added_to_life"], [top_deck["instance_id"]])
+        self.assertEqual(result["effect_result"]["discarded"], [discard_card["instance_id"]])
+        self.assertEqual(player["life"], 1)
+
+    def test_manual_trigger_requires_trigger_window_if_battle_context_exists(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        player = state["players"]["P2"]
+        trigger_card = player["life_cards"][0]
+        trigger_card["card_id"] = "OP12-112"
+        trigger_card["name"] = "Baby 5"
+        state["battle_context"] = {
+            "active": True,
+            "turn": state["turn"],
+            "attacking_player": "P1",
+            "defending_player": "P2",
+            "attacker_id": "P1-CARD-999",
+            "original_target": "leader",
+            "current_target": "leader",
+            "stage": "damage_resolution",
+            "events": [],
+            "status": "in_progress",
+        }
+
+        with self.assertRaises(ValueError):
+            self.engine.manual_activate_trigger(state, "P2", trigger_card["instance_id"])
+
+    def test_manual_trigger_in_trigger_window_updates_battle_context(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        player = state["players"]["P2"]
+        trigger_card = player["life_cards"][0]
+        trigger_card["card_id"] = "OP12-112"
+        trigger_card["name"] = "Baby 5"
+        player["deck"] = [
+            self.engine.build_card_instance("P2", "OP12-086"),
+            self.engine.build_card_instance("P2", "OP12-093"),
+        ] + player["deck"]
+        state["battle_context"] = {
+            "active": True,
+            "turn": state["turn"],
+            "attacking_player": "P1",
+            "defending_player": "P2",
+            "attacker_id": "P1-CARD-999",
+            "original_target": "leader",
+            "current_target": "leader",
+            "stage": "trigger_window",
+            "events": [],
+            "status": "in_progress",
+        }
+
+        result = self.engine.manual_activate_trigger(state, "P2", trigger_card["instance_id"])
+
+        self.assertEqual(result["effect_result"]["effect"], "OP12-112")
+        trigger_events = [event for event in state["battle_context"]["events"] if event["stage"] == "trigger_window"]
+        self.assertTrue(any(event.get("manual_trigger") is True for event in trigger_events))
+        self.assertTrue(any(event.get("resolution") == "trigger" for event in trigger_events))
 
     def test_manual_resolve_life_damage_adds_card_to_hand(self) -> None:
         state = self.engine.create_initial_state(seed=7)
@@ -577,6 +863,25 @@ class GLATEngineTests(unittest.TestCase):
         self.assertEqual(return_result["from"], "attached")
         self.assertEqual(player["attached_don"][target["instance_id"]], 1)
         self.assertEqual(len(player["don_area"]), 1)
+
+    def test_attached_don_power_only_applies_during_owner_turn(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P2"
+        state["phase"] = "main"
+        player = state["players"]["P2"]
+        leader = player["leader"]
+        base_power = leader["power"]
+        player["don_deck"] = player["don_deck"][1:]
+        player["attached_don"] = {leader["instance_id"]: 1}
+
+        self.assertEqual(self.engine._current_power(state, player, leader), base_power + 1000)
+
+        self.engine.end_phase(state)
+
+        self.assertEqual(state["active_player"], "P1")
+        self.assertEqual(player["attached_don"][leader["instance_id"]], 1)
+        self.assertEqual(self.engine._current_power(state, player, leader), base_power)
 
     def test_on_ko_effects_chain_for_hack(self) -> None:
         state = self.engine.create_initial_state(seed=7)
@@ -663,6 +968,13 @@ class GLATEngineTests(unittest.TestCase):
         self.assertEqual(result["final_target"], blocker["instance_id"])
         self.assertEqual(result["defense"]["blocker_id"], blocker["instance_id"])
         self.assertEqual(defender_player["life"], 4)
+        self.assertIsNone(state["battle_context"])
+        self.assertEqual(result["battle_context"]["status"], "battle_complete")
+        self.assertTrue(any(event["stage"] == "blocker_window" for event in result["battle_context"]["events"]))
+        self.assertTrue(any(event["stage"] == "counter_window" for event in result["battle_context"]["events"]))
+        self.assertTrue(any(event["stage"] == "cleanup" for event in result["battle_context"]["events"]))
+        blocker_event = next(event for event in result["battle_context"]["events"] if event["stage"] == "blocker_window")
+        self.assertEqual(blocker_event["chosen_blocker"], blocker["instance_id"])
 
     def test_default_counter_can_prevent_leader_damage(self) -> None:
         state = self.engine.create_initial_state(seed=7)
@@ -691,6 +1003,12 @@ class GLATEngineTests(unittest.TestCase):
         trashed_ids = [card["instance_id"] for card in defender_player["trash"]]
         self.assertIn(counter_card["instance_id"], trashed_ids)
         self.assertIn(discard_cost["instance_id"], trashed_ids)
+        self.assertIsNone(state["battle_context"])
+        self.assertEqual(result["battle_context"]["status"], "blocked_or_countered")
+        self.assertTrue(any(event.get("counter_used") == counter_card["instance_id"] for event in result["battle_context"]["events"]))
+        counter_window_events = [event for event in result["battle_context"]["events"] if event["stage"] == "counter_window"]
+        self.assertTrue(any("target_power_after_counter" in event for event in counter_window_events))
+        self.assertTrue(any(event["stage"] == "cleanup" for event in result["battle_context"]["events"]))
 
     def test_trigger_activates_from_life_damage(self) -> None:
         engine = SpyEngine(agent=self.agent, trigger_choice_provider=always_trigger)
@@ -723,6 +1041,65 @@ class GLATEngineTests(unittest.TestCase):
         self.assertEqual(result["trigger_result"]["effect_result"]["effect"], "OP12-112")
         self.assertEqual(len(result["trigger_result"]["effect_result"]["drawn"]), 2)
         self.assertEqual(len(defender_player["hand"]), starting_hand + 2)
+        self.assertIsNone(state["battle_context"])
+        self.assertEqual(result["battle_context"]["status"], "damage_resolved")
+        self.assertTrue(any(event["stage"] == "trigger_window" for event in result["battle_context"]["events"]))
+        self.assertTrue(any(event["stage"] == "cleanup" for event in result["battle_context"]["events"]))
+        self.assertTrue(any(event.get("trigger_chosen") is True for event in result["battle_context"]["events"]))
+        self.assertTrue(any(event.get("resolution") == "trigger" for event in result["battle_context"]["events"]))
+
+    def test_life_damage_without_trigger_records_trigger_decision_and_cleanup(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+
+        attacker_player = state["players"]["P1"]
+        defender_player = state["players"]["P2"]
+        attacker = self.engine.build_card_instance("P1", "OP12-119")
+        attacker["played_turn"] = 2
+        attacker_player["board"] = [attacker]
+        defender_player["hand"] = []
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "attack", "payload": {"attacker_id": attacker["instance_id"], "target": "leader"}},
+        )
+
+        trigger_events = [event for event in result["battle_context"]["events"] if event["stage"] == "trigger_window"]
+        self.assertGreaterEqual(len(trigger_events), 2)
+        self.assertTrue(any(event.get("trigger_chosen") is False for event in trigger_events))
+        self.assertTrue(any(event.get("resolution") == "hand" for event in trigger_events))
+        self.assertTrue(any(event["stage"] == "cleanup" for event in result["battle_context"]["events"]))
+
+    def test_ko_resolution_records_chained_ko_effect(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 5
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+        attacker_player = state["players"]["P1"]
+        defender_player = state["players"]["P2"]
+
+        attacker = self.engine.build_card_instance("P1", "OP12-119")
+        attacker["played_turn"] = 4
+        hack = self.engine.build_card_instance("P2", "OP12-089")
+        hack["played_turn"] = 4
+        hack["state"] = "rested"
+        small_target = self.engine.build_card_instance("P1", "OP12-086")
+
+        attacker_player["board"] = [attacker, small_target]
+        defender_player["board"] = [hack]
+        defender_player["hand"] = []
+        defender_player["trash"] = []
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "attack", "payload": {"attacker_id": attacker["instance_id"], "target": hack["instance_id"]}},
+        )
+
+        ko_events = [event for event in result["battle_context"]["events"] if event["stage"] == "ko_resolution"]
+        self.assertTrue(any(event.get("ko_target") == hack["instance_id"] for event in ko_events))
+        self.assertTrue(any(event.get("ko_effect") == "OP12-089" for event in ko_events))
 
     def test_ai_main_phase_uses_one_call_per_turn_and_terminates(self) -> None:
         state = self.engine.run_game(max_turns=10, seed=7)

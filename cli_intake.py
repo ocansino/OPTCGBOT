@@ -58,6 +58,66 @@ def log_opponent_intake_event(
     )
 
 
+def format_battle_context_lines(battle_context: Optional[Dict[str, Any]]) -> List[str]:
+    if not battle_context:
+        return []
+    header = (
+        f"Battle | status {battle_context.get('status', '-')} | "
+        f"target {battle_context.get('current_target', battle_context.get('original_target', '-'))}"
+    )
+    lines = [header]
+    for event in battle_context.get("events", []):
+        stage = event.get("stage", "?")
+        details = []
+        for key in (
+            "target",
+            "current_target",
+            "chosen_blocker",
+            "counter_used",
+            "revealed_life",
+            "trigger_chosen",
+            "resolution",
+            "cleanup_reason",
+            "ko",
+            "blocked_or_countered",
+            "won_game",
+        ):
+            if key in event:
+                details.append(f"{key}={event[key]}")
+        if stage == "damage_resolution":
+            if "attacker_power" in event and "defender_power" in event:
+                details.append(f"power={event['attacker_power']}v{event['defender_power']}")
+        if stage == "counter_window" and "target_power_after_counter" in event:
+            details.append(f"target_power={event['target_power_after_counter']}")
+        line = f"- {stage}"
+        if details:
+            line += f": {', '.join(details)}"
+        lines.append(line)
+    return lines
+
+
+def get_last_battle_context(state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    logs = state.get("logs", [])
+    if not logs:
+        return None
+    result = logs[-1].get("result", {})
+    return result.get("battle_context")
+
+
+def log_battle_context_event(
+    state: Dict[str, Any],
+    summary: str,
+    battle_context: Optional[Dict[str, Any]],
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    if not battle_context:
+        return
+    payload = dict(details or {})
+    payload["battle_context"] = battle_context
+    payload["battle_lines"] = format_battle_context_lines(battle_context)
+    log_opponent_intake_event(state, "battle_trace", summary, payload)
+
+
 def finish_opponent_intake_session(state: Dict[str, Any], status: str) -> None:
     session = get_active_opponent_intake(state)
     if session is None:
@@ -587,6 +647,9 @@ def _run_manual_state_adjustment(
             return True
         result = engine.manual_resolve_life_damage(state, player_id, amount)
         printer(f"Life resolved: {result}")
+        memory = _memory(state)
+        memory["last_target_id"] = state["players"][player_id]["leader"]["instance_id"]
+        memory["last_target_was_leader"] = True
         log_opponent_intake_event(state, "battle", f"Shorthand life report: {player_id} resolved {amount} life damage", {"result": result, "source": command})
         return True
 
@@ -705,7 +768,14 @@ def handle_shorthand_report(
             return False
         if not apply_human_action(engine, state, action):
             return False
+        battle_context = get_last_battle_context(state)
         log_opponent_intake_event(state, "attack", f"Shorthand attack report: {attacker_ref} into {target_ref}", {"action": action, "source": command, "label": action_label(action)})
+        log_battle_context_event(
+            state,
+            f"Battle trace for {attacker_ref} into {target_ref}",
+            battle_context,
+            {"action": action, "source": command},
+        )
         remember_action(state, action)
         remember_card_reference(state, "attacker", _find_card_by_instance(state, action["payload"]["attacker_id"]))
         if action["payload"]["target"] != "leader":

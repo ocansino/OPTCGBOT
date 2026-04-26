@@ -159,6 +159,7 @@ class GLATEngine:
             "first_player": "P1",
             "phase": "refresh",
             "winner": None,
+            "battle_context": None,
             "logs": [],
             "players": {
                 "P1": self._build_player_state("P1", leader_card, deck_ids, rng),
@@ -192,6 +193,7 @@ class GLATEngine:
         state.setdefault("winner", None)
         state.setdefault("logs", [])
         state.setdefault("first_player", "P1")
+        state.setdefault("battle_context", None)
 
         for player_id in ("P1", "P2"):
             player = state["players"][player_id]
@@ -303,8 +305,14 @@ class GLATEngine:
         if zone == "life_cards":
             player["life"] += 1
 
-    def _current_power(self, player: Dict[str, Any], card: Dict[str, Any]) -> int:
-        attached = player["attached_don"].get(card["instance_id"], 0)
+    def _current_power(self, state: Dict[str, Any], player: Dict[str, Any], card: Dict[str, Any]) -> int:
+        attached = 0
+        player_id = next(
+            (candidate_id for candidate_id, candidate in state["players"].items() if candidate is player),
+            None,
+        )
+        if state["active_player"] == player_id:
+            attached = player["attached_don"].get(card["instance_id"], 0)
         return (card.get("power") or 0) + (attached * 1000) + (card.get("battle_power_bonus") or 0)
 
     def _effective_play_cost(self, player: Dict[str, Any], card: Dict[str, Any]) -> int:
@@ -394,7 +402,8 @@ class GLATEngine:
             remaining_hand = [item for item in player["hand"] if item["instance_id"] != card["instance_id"]]
             return 3000 if remaining_hand else 0
         if card.get("counter"):
-            return int(card["counter"]) * 1000
+            bonus = int(card["counter"])
+            return bonus * 1000 if bonus <= 10 else bonus
         return 0
 
     def _available_counter_cards(self, player: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -402,6 +411,102 @@ class GLATEngine:
             card for card in player["hand"]
             if self._counter_bonus_preview(player, card) > 0
         ]
+
+    def _is_counter_event(self, player: Dict[str, Any], card: Dict[str, Any]) -> bool:
+        return card.get("category") == "Event" and self._counter_bonus_preview(player, card) > 0
+
+    def _open_battle_context(
+        self,
+        state: Dict[str, Any],
+        attacker: Dict[str, Any],
+        target: str,
+    ) -> Dict[str, Any]:
+        context = {
+            "active": True,
+            "turn": state["turn"],
+            "attacking_player": state["active_player"],
+            "defending_player": self._opponent_id(state["active_player"]),
+            "attacker_id": attacker["instance_id"],
+            "original_target": target,
+            "current_target": target,
+            "stage": "declare_attack",
+            "events": [
+                {
+                    "stage": "declare_attack",
+                    "attacker_id": attacker["instance_id"],
+                    "target": target,
+                }
+            ],
+            "status": "in_progress",
+        }
+        state["battle_context"] = context
+        return context
+
+    def _advance_battle_context(
+        self,
+        state: Dict[str, Any],
+        stage: str,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        context = state.get("battle_context")
+        if context is None:
+            return
+        context["stage"] = stage
+        context["events"].append({"stage": stage, **(details or {})})
+        if details and "current_target" in details:
+            context["current_target"] = details["current_target"]
+
+    def _close_battle_context(
+        self,
+        state: Dict[str, Any],
+        status: str,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        context = state.get("battle_context")
+        if context is None:
+            return {}
+        context["status"] = status
+        if details:
+            context["events"].append({"stage": "battle_complete", **details})
+        snapshot = copy.deepcopy(context)
+        state["battle_context"] = None
+        return snapshot
+
+    def _cleanup_battle_context(
+        self,
+        state: Dict[str, Any],
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self._advance_battle_context(state, "cleanup", details or {})
+
+    def _finalize_battle(
+        self,
+        state: Dict[str, Any],
+        status: str,
+        cleanup_details: Optional[Dict[str, Any]] = None,
+        close_details: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        self._clear_battle_power_bonuses(state)
+        self._cleanup_battle_context(state, cleanup_details)
+        return self._close_battle_context(state, status, close_details)
+
+    def _validate_counter_timing(self, state: Dict[str, Any], player_id: str) -> None:
+        if state["active_player"] == player_id:
+            raise ValueError("Counter cards can only be used during the opponent's turn in response to an attack")
+        if state["phase"] != "main":
+            raise ValueError("Counter cards can only be used during the attack window in main phase")
+        context = state.get("battle_context")
+        if context is not None and context.get("stage") != "counter_window":
+            raise ValueError("Counter cards can only be used during the active counter window")
+
+    def _validate_trigger_timing(self, state: Dict[str, Any], player_id: str) -> None:
+        context = state.get("battle_context")
+        if context is None:
+            return
+        if context.get("defending_player") != player_id:
+            raise ValueError("Only the defending player can activate a trigger during the active battle window")
+        if context.get("stage") != "trigger_window":
+            raise ValueError("Trigger cards can only be activated during the active trigger window")
 
     def _discard_from_hand(
         self,
@@ -594,6 +699,7 @@ class GLATEngine:
 
     def _choose_blocker_default(
         self,
+        state: Dict[str, Any],
         defender: Dict[str, Any],
         blocker_options: List[Dict[str, Any]],
         target: str,
@@ -602,7 +708,7 @@ class GLATEngine:
     ) -> Optional[str]:
         if not blocker_options:
             return None
-        current_target_power = self._current_power(defender, current_target_card)
+        current_target_power = self._current_power(state, defender, current_target_card)
         if attacker_power < current_target_power:
             return None
         if target != "leader":
@@ -612,29 +718,192 @@ class GLATEngine:
 
     def _choose_counters_default(
         self,
+        state: Dict[str, Any],
         defender: Dict[str, Any],
         current_target_card: Dict[str, Any],
         attacker_power: int,
     ) -> List[str]:
-        target_power = self._current_power(defender, current_target_card)
+        target_power = self._current_power(state, defender, current_target_card)
         needed = attacker_power - target_power
         if needed < 0:
             return []
-        counter_cards = self._available_counter_cards(defender)
         if current_target_card["instance_id"] != defender["leader"]["instance_id"] and self._effective_character_cost(defender, current_target_card) < 6:
             return []
-        ordered = sorted(
-            counter_cards,
-            key=lambda card: (self._counter_bonus_preview(defender, card), card.get("cost", 0), card.get("name", "")),
-        )
-        chosen_ids = []
+        simulated_hand = list(defender["hand"])
+        chosen_ids: List[str] = []
         running = 0
-        for card in ordered:
-            chosen_ids.append(card["instance_id"])
-            running += self._counter_bonus_preview(defender, card)
+
+        while running <= needed:
+            simulated_player = dict(defender)
+            simulated_player["hand"] = simulated_hand
+            counter_cards = [
+                card for card in simulated_hand
+                if self._counter_bonus_preview(simulated_player, card) > 0
+            ]
+            if not counter_cards:
+                break
+            finishing_cards = [
+                card for card in counter_cards
+                if running + self._counter_bonus_preview(simulated_player, card) > needed
+            ]
+            candidate_pool = finishing_cards or counter_cards
+            selected = min(
+                candidate_pool,
+                key=lambda card: (
+                    self._counter_bonus_preview(simulated_player, card),
+                    card.get("cost", 0),
+                    card.get("name", ""),
+                ),
+            )
+            selected_bonus = self._counter_bonus_preview(simulated_player, selected)
+            chosen_ids.append(selected["instance_id"])
+            running += selected_bonus
+            simulated_hand = [
+                card for card in simulated_hand
+                if card["instance_id"] != selected["instance_id"]
+            ]
+            if selected["card_id"] == "OP06-115":
+                discard_choice = self._choose_lowest_value_cards(simulated_hand, 1)
+                if discard_choice:
+                    discard_id = discard_choice[0]["instance_id"]
+                    simulated_hand = [
+                        card for card in simulated_hand
+                        if card["instance_id"] != discard_id
+                    ]
+                else:
+                    chosen_ids.pop()
+                    break
             if running > needed:
                 return chosen_ids
         return []
+
+    def _request_defense_choice(
+        self,
+        state: Dict[str, Any],
+        defender_id: str,
+        attacker: Dict[str, Any],
+        original_target: str,
+        blocker_options: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        if self.defense_choice_provider is None:
+            return None
+        response = self.defense_choice_provider(
+            state=state,
+            defender_id=defender_id,
+            attacker=copy.deepcopy(attacker),
+            target=original_target,
+            blocker_options=copy.deepcopy(blocker_options),
+            counter_options=copy.deepcopy(self._available_counter_cards(state["players"][defender_id])),
+        )
+        if not isinstance(response, dict) or response.get("mode") == "default":
+            return None
+        return {
+            "blocker_id": response.get("blocker_id"),
+            "counter_ids": list(response.get("counter_ids", [])),
+        }
+
+    def _resolve_blocker_window(
+        self,
+        state: Dict[str, Any],
+        defender_id: str,
+        attacker: Dict[str, Any],
+        original_target: str,
+        attacker_power: int,
+        blocker_options: List[Dict[str, Any]],
+        defense_choice: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        defender = state["players"][defender_id]
+        current_target_card = defender["leader"] if original_target == "leader" else self._find_card_by_instance(defender, original_target)
+        assert current_target_card is not None
+
+        blocker_id = defense_choice.get("blocker_id") if defense_choice is not None else None
+        if blocker_id is None:
+            blocker_id = self._choose_blocker_default(
+                state,
+                defender,
+                blocker_options,
+                original_target,
+                attacker_power,
+                current_target_card,
+            )
+
+        selected_blocker: Optional[Dict[str, Any]] = None
+        if blocker_id is not None:
+            selected_blocker = next(
+                (card for card in blocker_options if card["instance_id"] == blocker_id),
+                None,
+            )
+        if selected_blocker is None:
+            blocker_id = None
+        else:
+            selected_blocker["state"] = "rested"
+            current_target_card = selected_blocker
+
+        self._advance_battle_context(
+            state,
+            "blocker_window",
+            {
+                "current_target": current_target_card["instance_id"] if blocker_id is not None else original_target,
+                "blocker_options": [card["instance_id"] for card in blocker_options],
+                "chosen_blocker": blocker_id,
+                "attacker_power": attacker_power,
+            },
+        )
+        return {
+            "blocker_id": blocker_id,
+            "current_target": current_target_card["instance_id"] if blocker_id is not None else original_target,
+            "current_target_card": current_target_card,
+        }
+
+    def _resolve_counter_window(
+        self,
+        state: Dict[str, Any],
+        defender_id: str,
+        attacker_power: int,
+        current_target: str,
+        current_target_card: Dict[str, Any],
+        defense_choice: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        defender = state["players"][defender_id]
+        planned_counter_ids = (
+            list(defense_choice.get("counter_ids", []))
+            if defense_choice is not None
+            else self._choose_counters_default(state, defender, current_target_card, attacker_power)
+        )
+        self._advance_battle_context(
+            state,
+            "counter_window",
+            {
+                "current_target": current_target,
+                "counter_options": [card["instance_id"] for card in self._available_counter_cards(defender)],
+                "planned_counters": list(planned_counter_ids),
+                "target_power_before_counters": self._current_power(state, defender, current_target_card),
+            },
+        )
+
+        counter_results: List[Dict[str, Any]] = []
+        for counter_id in planned_counter_ids:
+            if attacker_power < self._current_power(state, defender, current_target_card):
+                break
+            if any(card["instance_id"] == counter_id for card in defender["hand"]):
+                counter_result = self._apply_counter_from_instance(
+                    state,
+                    defender_id,
+                    counter_id,
+                    current_target_card["instance_id"],
+                )
+                counter_results.append(counter_result)
+                self._advance_battle_context(
+                    state,
+                    "counter_window",
+                    {
+                        "current_target": current_target,
+                        "counter_used": counter_id,
+                        "target_after_counter": current_target_card["instance_id"],
+                        "target_power_after_counter": self._current_power(state, defender, current_target_card),
+                    },
+                )
+        return counter_results
 
     def _choose_defense_plan(
         self,
@@ -645,39 +914,35 @@ class GLATEngine:
         attacker_power: int,
         blocker_options: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        defender = state["players"][defender_id]
-        current_target_card = defender["leader"] if original_target == "leader" else self._find_card_by_instance(defender, original_target)
-        assert current_target_card is not None
-
-        if self.defense_choice_provider is not None:
-            response = self.defense_choice_provider(
-                state=state,
-                defender_id=defender_id,
-                attacker=copy.deepcopy(attacker),
-                target=original_target,
-                blocker_options=copy.deepcopy(blocker_options),
-                counter_options=copy.deepcopy(self._available_counter_cards(defender)),
-            )
-            if isinstance(response, dict) and response.get("mode") != "default":
-                return {
-                    "blocker_id": response.get("blocker_id"),
-                    "counter_ids": list(response.get("counter_ids", [])),
-                }
-
-        blocker_id = self._choose_blocker_default(
-            defender,
+        defense_choice = self._request_defense_choice(
+            state,
+            defender_id,
+            attacker,
+            original_target,
             blocker_options,
+        )
+        blocker_result = self._resolve_blocker_window(
+            state,
+            defender_id,
+            attacker,
             original_target,
             attacker_power,
-            current_target_card,
+            blocker_options,
+            defense_choice,
         )
-        if blocker_id is not None:
-            current_target_card = self._find_card_by_instance(defender, blocker_id)
-            assert current_target_card is not None
-
+        counter_results = self._resolve_counter_window(
+            state,
+            defender_id,
+            attacker_power,
+            blocker_result["current_target"],
+            blocker_result["current_target_card"],
+            defense_choice,
+        )
         return {
-            "blocker_id": blocker_id,
-            "counter_ids": self._choose_counters_default(defender, current_target_card, attacker_power),
+            "blocker_id": blocker_result["blocker_id"],
+            "counter_ids": [item["used_counter"] for item in counter_results],
+            "current_target": blocker_result["current_target"],
+            "counter_results": counter_results,
         }
 
     def _apply_counter_from_instance(
@@ -809,6 +1074,68 @@ class GLATEngine:
             "skipped": "unsupported_trigger",
         }
         return result
+
+    def _resolve_life_damage_step(
+        self,
+        state: Dict[str, Any],
+        defender_id: str,
+        current_target: str,
+    ) -> Dict[str, Any]:
+        defender = state["players"][defender_id]
+        revealed = self._remove_card_from_zone(
+            defender,
+            defender["life_cards"][0]["instance_id"],
+            "life_cards",
+        )
+        activate_trigger = self._should_activate_trigger(state, defender_id, revealed)
+        self._advance_battle_context(
+            state,
+            "trigger_window",
+            {
+                "current_target": current_target,
+                "revealed_life": revealed["instance_id"],
+                "trigger_available": True,
+                "trigger_chosen": activate_trigger,
+            },
+        )
+        if activate_trigger:
+            trigger_result = self._resolve_trigger_card(state, defender_id, revealed)
+            effect_name = None
+            if isinstance(trigger_result.get("effect_result"), dict):
+                effect_name = trigger_result["effect_result"].get("effect")
+            self._advance_battle_context(
+                state,
+                "trigger_window",
+                {
+                    "current_target": current_target,
+                    "revealed_life": revealed["instance_id"],
+                    "resolution": "trigger",
+                    "triggered_card_id": revealed["card_id"],
+                    "trigger_effect": effect_name or revealed["card_id"],
+                },
+            )
+            return {
+                "revealed": revealed,
+                "life_to_hand": [],
+                "trigger_result": trigger_result,
+            }
+
+        defender["hand"].append(revealed)
+        self._advance_battle_context(
+            state,
+            "trigger_window",
+            {
+                "current_target": current_target,
+                "revealed_life": revealed["instance_id"],
+                "resolution": "hand",
+                "triggered_card_id": revealed["card_id"],
+            },
+        )
+        return {
+            "revealed": revealed,
+            "life_to_hand": [revealed["instance_id"]],
+            "trigger_result": None,
+        }
 
     def _resolve_opponent_leader_reaction_to_play(
         self,
@@ -1018,11 +1345,21 @@ class GLATEngine:
                 lambda candidate: candidate.get("category") == "Character" and (candidate.get("cost") or 0) <= 6,
                 "Choose a character to play from trash with Monkey.D.Dragon",
             )
-            return {
+            result = {
                 "effect": "OP12-094",
                 "recycled": recycled,
                 "played_from_trash": played["instance_id"] if played is not None else None,
             }
+            if played is not None:
+                leader_reaction = self._resolve_opponent_leader_reaction_to_play(
+                    state,
+                    player_id,
+                    played,
+                    source="effect",
+                )
+                if leader_reaction is not None:
+                    result["leader_reaction"] = leader_reaction
+            return result
 
         if card_id == "OP12-087":
             if len(opponent["hand"]) < 5:
@@ -1388,6 +1725,7 @@ class GLATEngine:
         counter_instance_id: str,
         target_instance_id: str,
     ) -> Dict[str, Any]:
+        self._validate_counter_timing(state, player_id)
         result = self._apply_counter_from_instance(state, player_id, counter_instance_id, target_instance_id)
 
         self.log_action(
@@ -1408,9 +1746,27 @@ class GLATEngine:
         player_id: str,
         trigger_instance_id: str,
     ) -> Dict[str, Any]:
+        self._validate_trigger_timing(state, player_id)
         player = state["players"][player_id]
         trigger_card = self._remove_card_from_zone(player, trigger_instance_id, "life_cards")
         result = self._resolve_trigger_card(state, player_id, trigger_card)
+        if state.get("battle_context") is not None:
+            effect_name = None
+            if isinstance(result.get("effect_result"), dict):
+                effect_name = result["effect_result"].get("effect")
+            self._advance_battle_context(
+                state,
+                "trigger_window",
+                {
+                    "current_target": state["battle_context"].get("current_target"),
+                    "revealed_life": trigger_instance_id,
+                    "trigger_chosen": True,
+                    "resolution": "trigger",
+                    "triggered_card_id": trigger_card["card_id"],
+                    "trigger_effect": effect_name or trigger_card["card_id"],
+                    "manual_trigger": True,
+                },
+            )
 
         self.log_action(
             state,
@@ -1440,6 +1796,24 @@ class GLATEngine:
             raise ValueError("active_player must be P1 or P2")
         if state["phase"] not in PHASES:
             raise ValueError(f"Invalid phase: {state['phase']}")
+        battle_context = state.get("battle_context")
+        if battle_context is not None:
+            if battle_context.get("attacking_player") not in ("P1", "P2"):
+                raise ValueError("battle_context.attacking_player must be P1 or P2")
+            if battle_context.get("defending_player") not in ("P1", "P2"):
+                raise ValueError("battle_context.defending_player must be P1 or P2")
+            if not battle_context.get("attacker_id"):
+                raise ValueError("battle_context must include attacker_id")
+            if battle_context.get("stage") not in {
+                "declare_attack",
+                "blocker_window",
+                "counter_window",
+                "damage_resolution",
+                "trigger_window",
+                "ko_resolution",
+                "cleanup",
+            }:
+                raise ValueError(f"Invalid battle_context stage: {battle_context.get('stage')}")
 
         for player_id in ("P1", "P2"):
             player = state["players"][player_id]
@@ -1595,6 +1969,8 @@ class GLATEngine:
                 raise InvalidActionError("Card must be in hand")
             if card["category"] not in ("Character", "Event"):
                 raise InvalidActionError("Only Character and Event cards are playable right now")
+            if self._is_counter_event(player, card):
+                raise InvalidActionError("Counter event cards are defensive reactions and cannot be played during your own turn")
             if len(player["don_area"]) < self._effective_play_cost(player, card):
                 raise InvalidActionError("Not enough DON!! to play card")
             if card["category"] == "Character" and len(player["board"]) >= 5:
@@ -1705,8 +2081,9 @@ class GLATEngine:
     def resolve_attack(self, state: Dict[str, Any], attacker: Dict[str, Any], target: str) -> Dict[str, Any]:
         player = self.get_active_player(state)
         opponent = self.get_inactive_player(state)
-        attacker_power = self._current_power(player, attacker)
+        attacker_power = self._current_power(state, player, attacker)
         defender_id = self._opponent_id(state["active_player"])
+        self._open_battle_context(state, attacker, target)
         blocker_options = [
             card for card in opponent["board"]
             if card["state"] == "active" and self._has_blocker(opponent, card)
@@ -1719,25 +2096,13 @@ class GLATEngine:
             attacker_power,
             blocker_options,
         )
-        current_target = target
-        defense_result: Dict[str, Any] = {"blocker_id": None, "counters": []}
-
-        blocker_id = defense_plan.get("blocker_id")
-        if blocker_id is not None:
-            blocker = self._find_card_by_instance(opponent, blocker_id)
-            if blocker is not None and blocker["state"] == "active" and self._has_blocker(opponent, blocker):
-                blocker["state"] = "rested"
-                current_target = blocker_id
-                defense_result["blocker_id"] = blocker_id
-
+        current_target = defense_plan.get("current_target", target)
         target_card = opponent["leader"] if current_target == "leader" else self._find_card_by_instance(opponent, current_target)
         assert target_card is not None
-        for counter_id in defense_plan.get("counter_ids", []):
-            if attacker_power < self._current_power(opponent, target_card):
-                break
-            if any(card["instance_id"] == counter_id for card in opponent["hand"]):
-                counter_result = self._apply_counter_from_instance(state, defender_id, counter_id, target_card["instance_id"])
-                defense_result["counters"].append(counter_result)
+        defense_result: Dict[str, Any] = {
+            "blocker_id": defense_plan.get("blocker_id"),
+            "counters": list(defense_plan.get("counter_results", [])),
+        }
 
         if current_target == "leader":
             leader_effect = None
@@ -1752,7 +2117,25 @@ class GLATEngine:
                         "effect": "OP12-081",
                         "drawn": drawn["instance_id"] if drawn is not None else None,
                     }
-            defender_power = self._current_power(opponent, opponent["leader"])
+                    self._advance_battle_context(
+                        state,
+                        "damage_resolution",
+                        {
+                            "current_target": current_target,
+                            "leader_effect": "OP12-081",
+                            "leader_effect_drawn": drawn["instance_id"] if drawn is not None else None,
+                        },
+                    )
+            defender_power = self._current_power(state, opponent, opponent["leader"])
+            self._advance_battle_context(
+                state,
+                "damage_resolution",
+                {
+                    "current_target": current_target,
+                    "attacker_power": attacker_power,
+                    "defender_power": defender_power,
+                },
+            )
             if attacker_power < defender_power:
                 result = {
                     "target": "leader",
@@ -1765,29 +2148,46 @@ class GLATEngine:
                 }
                 if leader_effect is not None:
                     result["leader_effect"] = leader_effect
-                self._clear_battle_power_bonuses(state)
+                result["battle_context"] = self._finalize_battle(
+                    state,
+                    "blocked_or_countered",
+                    {
+                        "final_target": current_target,
+                        "cleanup_reason": "blocked_or_countered",
+                    },
+                    {"final_target": current_target, "blocked_or_countered": True},
+                )
                 return result
             if opponent["life"] > 0:
-                revealed = self._remove_card_from_zone(opponent, opponent["life_cards"][0]["instance_id"], "life_cards")
-                trigger_result = None
-                if self._should_activate_trigger(state, defender_id, revealed):
-                    trigger_result = self._resolve_trigger_card(state, defender_id, revealed)
-                else:
-                    opponent["hand"].append(revealed)
+                life_resolution = self._resolve_life_damage_step(state, defender_id, current_target)
+                trigger_result = life_resolution["trigger_result"]
                 result = {
                     "target": "leader",
                     "final_target": current_target,
                     "attacker_power": attacker_power,
                     "life_after": opponent["life"],
                     "won_game": False,
-                    "life_to_hand": [] if trigger_result is not None else [revealed["instance_id"]],
+                    "life_to_hand": list(life_resolution["life_to_hand"]),
                     "trigger_result": trigger_result,
                     "defender_power": defender_power,
                     "defense": defense_result,
                 }
                 if leader_effect is not None:
                     result["leader_effect"] = leader_effect
-                self._clear_battle_power_bonuses(state)
+                result["battle_context"] = self._finalize_battle(
+                    state,
+                    "damage_resolved",
+                    {
+                        "final_target": current_target,
+                        "cleanup_reason": "life_damage_resolved",
+                        "triggered": trigger_result is not None,
+                    },
+                    {
+                        "final_target": current_target,
+                        "life_after": opponent["life"],
+                        "triggered": trigger_result is not None,
+                    },
+                )
                 return result
 
             state["winner"] = state["active_player"]
@@ -1795,25 +2195,52 @@ class GLATEngine:
                 "target": "leader",
                 "final_target": current_target,
                 "attacker_power": attacker_power,
-                "defender_power": self._current_power(opponent, opponent["leader"]),
+                "defender_power": self._current_power(state, opponent, opponent["leader"]),
                 "life_after": 0,
                 "won_game": True,
                 "defense": defense_result,
             }
             if leader_effect is not None:
                 result["leader_effect"] = leader_effect
-            self._clear_battle_power_bonuses(state)
+            result["battle_context"] = self._finalize_battle(
+                state,
+                "game_won",
+                {
+                    "final_target": current_target,
+                    "cleanup_reason": "game_won",
+                },
+                {"final_target": current_target, "won_game": True},
+            )
             return result
 
         defender = self._find_card_by_instance(opponent, current_target)
         if defender is None:
             raise InvalidActionError("Defender not found")
 
-        defender_power = self._current_power(opponent, defender)
+        defender_power = self._current_power(state, opponent, defender)
         ko = attacker_power >= defender_power
         ko_result = None
+        self._advance_battle_context(
+            state,
+            "ko_resolution",
+            {
+                "current_target": current_target,
+                "attacker_power": attacker_power,
+                "defender_power": defender_power,
+                "ko": ko,
+            },
+        )
         if ko:
             ko_result = self._ko_character(state, defender_id, defender["instance_id"])
+            self._advance_battle_context(
+                state,
+                "ko_resolution",
+                {
+                    "current_target": current_target,
+                    "ko_target": defender["instance_id"],
+                    "ko_effect": ko_result.get("effect_result", {}).get("effect") if ko_result else None,
+                },
+            )
 
         result = {
             "target": target,
@@ -1825,7 +2252,16 @@ class GLATEngine:
         }
         if ko_result is not None:
             result["ko_result"] = ko_result
-        self._clear_battle_power_bonuses(state)
+        result["battle_context"] = self._finalize_battle(
+            state,
+            "battle_complete",
+            {
+                "final_target": current_target,
+                "cleanup_reason": "character_battle_complete",
+                "ko": ko,
+            },
+            {"final_target": current_target, "ko": ko},
+        )
         return result
 
     def run_turn(self, state: Dict[str, Any]) -> Dict[str, Any]:

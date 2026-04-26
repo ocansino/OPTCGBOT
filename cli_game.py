@@ -5,9 +5,12 @@ from typing import Any, Dict, List, Optional
 
 from cli_intake import (
     begin_opponent_intake_session as intake_begin_opponent_intake_session,
+    format_battle_context_lines as intake_format_battle_context_lines,
     finish_opponent_intake_session as intake_finish_opponent_intake_session,
     get_active_opponent_intake as intake_get_active_opponent_intake,
+    get_last_battle_context as intake_get_last_battle_context,
     handle_shorthand_report as intake_handle_shorthand_report,
+    log_battle_context_event as intake_log_battle_context_event,
     log_opponent_intake_event as intake_log_opponent_intake_event,
     print_opponent_intake_log as intake_print_opponent_intake_log,
     run_logged_human_action as intake_run_logged_human_action,
@@ -171,6 +174,13 @@ def print_summary(state: Dict[str, Any]) -> None:
             f"DON area {len(player['don_area'])} | "
             f"Attached DON {attached}"
         )
+    human_hand = state["players"][HUMAN_PLAYER]["hand"]
+    if human_hand:
+        print("Your hand:")
+        for index, card in enumerate(human_hand):
+            print(f"  {index}: {card_label(card)}")
+    else:
+        print("Your hand: empty")
     print("=" * 72)
 
 
@@ -370,6 +380,23 @@ def finish_opponent_intake_session(state: Dict[str, Any], status: str) -> None:
 
 def print_opponent_intake_log(state: Dict[str, Any], include_details: bool = False) -> None:
     intake_print_opponent_intake_log(state, include_details)
+
+
+def format_battle_context_lines(battle_context: Optional[Dict[str, Any]]) -> List[str]:
+    return intake_format_battle_context_lines(battle_context)
+
+
+def get_last_battle_context(state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    return intake_get_last_battle_context(state)
+
+
+def log_battle_context_event(
+    state: Dict[str, Any],
+    summary: str,
+    battle_context: Optional[Dict[str, Any]],
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    intake_log_battle_context_event(state, summary, battle_context, details)
 
 
 def run_logged_human_action(
@@ -845,10 +872,17 @@ def guided_attack(engine: GLATEngine, state: Dict[str, Any]) -> bool:
     selected_action = actions[selection]
     if not apply_human_action(engine, state, selected_action):
         return False
+    battle_context = get_last_battle_context(state)
     log_opponent_intake_event(
         state,
         "attack",
         f"Attack declared with {selected_action['payload']['attacker_id']} into {selected_action['payload']['target']}",
+        {"action": selected_action, "battle_context": battle_context},
+    )
+    log_battle_context_event(
+        state,
+        f"Battle trace for {selected_action['payload']['attacker_id']} into {selected_action['payload']['target']}",
+        battle_context,
         {"action": selected_action},
     )
     return True
@@ -1164,6 +1198,11 @@ def guided_attack_follow_up(engine: GLATEngine, state: Dict[str, Any], state_out
             print_summary(state)
             continue
         print_opponent_intake_log(state, include_details=True)
+        battle_context = get_last_battle_context(state)
+        if battle_context:
+            print("Latest battle trace:")
+            for line in format_battle_context_lines(battle_context):
+                print(f"  {line}")
 
 
 def guided_opponent_turn_step(engine: GLATEngine, state: Dict[str, Any], state_out: str) -> Optional[bool]:
@@ -1228,7 +1267,7 @@ def guided_opponent_turn_step(engine: GLATEngine, state: Dict[str, Any], state_o
         if raw:
             if handle_shorthand_report(engine, state, raw):
                 save_state(engine, state, state_out)
-                if raw.strip().split()[0].lower() in {"attack", "attacked"}:
+                if raw.strip().split()[0].lower() in {"attack", "attacked", "swing", "swung"}:
                     guided_attack_follow_up(engine, state, state_out)
                     save_state(engine, state, state_out)
                 return None
