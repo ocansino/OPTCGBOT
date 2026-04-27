@@ -8,6 +8,7 @@ from contextlib import redirect_stdout
 import cli_game
 from cli_game import HUMAN_PLAYER
 from glat_engine import GLATEngine
+from referee import get_legal_actions
 
 
 class OpponentIntakeTests(unittest.TestCase):
@@ -82,6 +83,36 @@ class OpponentIntakeTests(unittest.TestCase):
         rendered = output.getvalue()
         self.assertIn("Your hand:", rendered)
         self.assertIn("OP12-086", rendered)
+
+    def test_fake_planning_agent_prefers_legal_attack_when_available(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = cli_game.AI_PLAYER
+        state["phase"] = "main"
+        ai_player = state["players"][cli_game.AI_PLAYER]
+        attacker = self.engine.build_card_instance(cli_game.AI_PLAYER, "OP12-119")
+        attacker["played_turn"] = 2
+        ai_player["board"] = [attacker]
+        ai_player["don_area"] = ["P1-DON-01"]
+        legal_actions = get_legal_actions(state, self.engine)
+
+        plan = cli_game.FakePlanningAgent().get_turn_plan(state, legal_actions)
+        planned_actions = [legal_actions[index]["type"] for index in plan[:-1]]
+
+        self.assertIn("attack", planned_actions)
+
+    def test_fake_planning_agent_plays_card_before_spending_don_on_attacks(self) -> None:
+        legal_actions = [
+            {"type": "play_card", "payload": {"card_id": "P1-CARD-001"}},
+            {"type": "attach_don", "payload": {"card_id": "P1-LEADER", "amount": 1}},
+            {"type": "attack", "payload": {"attacker_id": "P1-LEADER", "target": "leader"}},
+            {"type": "end_turn", "payload": {}},
+        ]
+        state = self.engine.create_initial_state(seed=7)
+
+        plan = cli_game.FakePlanningAgent().get_turn_plan(state, legal_actions)
+
+        self.assertEqual(legal_actions[plan[0]]["type"], "play_card")
 
     def test_handle_shorthand_report_can_play_card_by_card_id(self) -> None:
         state = self.engine.create_initial_state(seed=7)

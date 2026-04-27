@@ -1,11 +1,15 @@
 {
   "turn": 1,
+  "match_mode": "digital_strict",
   "active_player": "P1",
   "first_player": "P1",
   "phase": "refresh",
   "winner": null,
   "battle_context": null,
   "logs": [],
+  "command_console": [],
+  "replay_log": [],
+  "ai_debug_history": [],
   "players": {
     "P1": {
       "life": 4,
@@ -628,6 +632,66 @@
       ],
       "hand": [
         {
+          "instance_id": "P1-CARD-001",
+          "card_id": "OP12-094",
+          "name": "Monkey.D.Dragon",
+          "category": "Character",
+          "cost": 8,
+          "base_cost": 8,
+          "power": 8000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P1-CARD-002",
+          "card_id": "OP12-119",
+          "name": "Bartholomew Kuma",
+          "category": "Character",
+          "cost": 6,
+          "base_cost": 6,
+          "power": 7000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P1-CARD-003",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "base_cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P1-CARD-004",
+          "card_id": "EB03-053",
+          "name": "Nami",
+          "category": "Character",
+          "cost": 5,
+          "base_cost": 5,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
           "instance_id": "P1-CARD-005",
           "card_id": "OP12-089",
           "name": "Hack",
@@ -641,7 +705,11 @@
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
-        },
+        }
+      ],
+      "board": [],
+      "trash": [],
+      "life_cards": [
         {
           "instance_id": "P1-CARD-006",
           "card_id": "OP12-098",
@@ -703,70 +771,6 @@
           "temporary_cost_bonus_expires": null
         }
       ],
-      "board": [],
-      "trash": [],
-      "life_cards": [
-        {
-          "instance_id": "P1-CARD-001",
-          "card_id": "OP12-094",
-          "name": "Monkey.D.Dragon",
-          "category": "Character",
-          "cost": 8,
-          "base_cost": 8,
-          "power": 8000,
-          "counter": null,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P1-CARD-002",
-          "card_id": "OP12-119",
-          "name": "Bartholomew Kuma",
-          "category": "Character",
-          "cost": 6,
-          "base_cost": 6,
-          "power": 7000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P1-CARD-003",
-          "card_id": "OP12-087",
-          "name": "Nico Robin",
-          "category": "Character",
-          "cost": 6,
-          "base_cost": 6,
-          "power": 7000,
-          "counter": null,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P1-CARD-004",
-          "card_id": "EB03-053",
-          "name": "Nami",
-          "category": "Character",
-          "cost": 5,
-          "base_cost": 5,
-          "power": 6000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        }
-      ],
       "don_deck": [
         "P1-DON-01",
         "P1-DON-02",
@@ -789,7 +793,8 @@
         "power": 5000,
         "state": "active"
       },
-      "turn_flags": {}
+      "turn_flags": {},
+      "mulligan_used": false
     },
     "P2": {
       "life": 4,
@@ -1412,6 +1417,66 @@
       ],
       "hand": [
         {
+          "instance_id": "P2-CARD-001",
+          "card_id": "OP12-089",
+          "name": "Hack",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-002",
+          "card_id": "OP12-087",
+          "name": "Nico Robin",
+          "category": "Character",
+          "cost": 6,
+          "base_cost": 6,
+          "power": 7000,
+          "counter": null,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-003",
+          "card_id": "OP12-112",
+          "name": "Baby 5",
+          "category": "Character",
+          "cost": 4,
+          "base_cost": 4,
+          "power": 5000,
+          "counter": 2000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
+          "instance_id": "P2-CARD-004",
+          "card_id": "OP14-108",
+          "name": "Silvers Rayleigh",
+          "category": "Character",
+          "cost": 6,
+          "base_cost": 6,
+          "power": 6000,
+          "counter": 1000,
+          "state": "active",
+          "played_turn": null,
+          "battle_power_bonus": 0,
+          "temporary_cost_bonus": 0,
+          "temporary_cost_bonus_expires": null
+        },
+        {
           "instance_id": "P2-CARD-005",
           "card_id": "OP12-097",
           "name": "Captains Assembled",
@@ -1425,7 +1490,11 @@
           "battle_power_bonus": 0,
           "temporary_cost_bonus": 0,
           "temporary_cost_bonus_expires": null
-        },
+        }
+      ],
+      "board": [],
+      "trash": [],
+      "life_cards": [
         {
           "instance_id": "P2-CARD-006",
           "card_id": "OP12-098",
@@ -1487,70 +1556,6 @@
           "temporary_cost_bonus_expires": null
         }
       ],
-      "board": [],
-      "trash": [],
-      "life_cards": [
-        {
-          "instance_id": "P2-CARD-001",
-          "card_id": "OP12-089",
-          "name": "Hack",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-002",
-          "card_id": "OP12-087",
-          "name": "Nico Robin",
-          "category": "Character",
-          "cost": 6,
-          "base_cost": 6,
-          "power": 7000,
-          "counter": null,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-003",
-          "card_id": "OP12-112",
-          "name": "Baby 5",
-          "category": "Character",
-          "cost": 4,
-          "base_cost": 4,
-          "power": 5000,
-          "counter": 2000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        },
-        {
-          "instance_id": "P2-CARD-004",
-          "card_id": "OP14-108",
-          "name": "Silvers Rayleigh",
-          "category": "Character",
-          "cost": 6,
-          "base_cost": 6,
-          "power": 6000,
-          "counter": 1000,
-          "state": "active",
-          "played_turn": null,
-          "battle_power_bonus": 0,
-          "temporary_cost_bonus": 0,
-          "temporary_cost_bonus_expires": null
-        }
-      ],
       "don_deck": [
         "P2-DON-01",
         "P2-DON-02",
@@ -1573,7 +1578,8 @@
         "power": 5000,
         "state": "active"
       },
-      "turn_flags": {}
+      "turn_flags": {},
+      "mulligan_used": false
     }
   }
 }

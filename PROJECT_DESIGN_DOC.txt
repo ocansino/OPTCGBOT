@@ -1,7 +1,7 @@
 Grand Line AI Trainer (GLAT)
 Project Design Doc
 
-Last updated: 2026-04-25
+Last updated: 2026-04-26
 
 1. Project Goal
 
@@ -28,6 +28,23 @@ The long-term architecture should be:
 - Future review layer analyzes games and produces lessons
 - Future training modes can also run AI vs AI games entirely inside the engine
 
+Primary product modes:
+- Physical Table Mode
+  - the human uses their real deck, playmat, hand, and life cards outside the program
+  - the physical table is authoritative for the human side
+  - the app accepts reported facts like "play OP12-021" even when that card was not preloaded into a tracked human decklist
+  - the app looks up known card IDs, creates tracked card instances as needed, and asks for clarification or manual resolution when effects are unsupported
+  - the AI side remains strict: AI actions must come from engine-generated legal actions and must validate before execution
+- Digital Test Mode
+  - both players' decks and hidden zones are represented in engine state
+  - commands are stricter because the engine can verify hand contents, deck contents, and legality
+  - this remains the main path for regression tests, GUI testing, replay/debugging, and future AI vs AI self-play
+
+Important mode boundary:
+- physical reporting should be flexible for the human side because the real game already happened on the table
+- AI play must stay engine-strict in every mode
+- unsupported human card effects should never be invented by the LLM; they should be skipped, manually resolved, or tracked as notes until implemented
+
 
 2. Current Status
 
@@ -51,6 +68,7 @@ What is already built:
 - both P1 and P2 decks are built from cards.json
 - guided CLI game loop in cli_game.py for real local play/testing
 - local operator GUI in operator_gui.py for match control and intake/testing
+- first-pass table-shaped GUI with visible zones, compact card tiles, hidden life display, click-to-inspect card details, replay navigation, and horizontally scrollable card zones
 - save/load and mid-game resume support for CLI engine games
 - manual state/effect helpers for:
   - draw
@@ -61,6 +79,7 @@ What is already built:
   - move between zones
   - add life
 - initial deck setup now tracks real life cards, not only a life integer
+- initial setup now shuffles decks, draws the opening hand before placing life, and supports one opening mulligan before life is placed
 - first-pass deterministic effect framework for the current Koala deck
 - human interactive effect choices in the CLI for search/select effects
 - first trigger/counter helpers for current deck cards
@@ -70,6 +89,10 @@ What is already built:
 - guided review/correction tools for reconciling state drift
 - explicit battle-context stages for attacks, including blocker / counter / trigger / cleanup timing
 - battle-trace surfacing in the CLI, intake log, and local operator GUI
+- replay/debug timeline with before/after snapshots and state diffs per applied action
+- AI debug history for legal actions, planned actions, executed actions, and fallback end_turn behavior
+- CLI replay/debug commands for recent replay entries, latest diff, and recent AI debug
+- operator GUI replay timeline, latest diff, and AI debug panels
 - pressure-test scenarios for full reported turns, blocker redirects, and trigger branches
 - current-scope engine-completeness sweep for supported reaction/effect cards
 - expanded regression coverage in tests/test_glat_engine.py
@@ -81,14 +104,16 @@ Important implementation note:
 - the engine remains the single source of truth
 - the current AI path supports short planned sequences
 - defensive play now has an explicit engine-managed battle flow for the supported scope
-- the remaining gaps are mostly completeness, replay/debugging depth, and broader card/timing coverage
+- the remaining gaps are mostly replay/debugging depth, operator UX, and broader card/timing coverage
+- the next product direction is to separate strict digital testing from flexible physical-table reporting
 
 
 3. Current Architecture
 
 cards.json
 - stores the chosen deck list and card details
-- remains the core deck-definition source for the engine
+- remains the core deck-definition source for strict digital games and AI deck construction
+- should not be the only source for physical-table human card reports; physical mode needs lookup access to the broader local card database
 
 glat_engine.py
 - main game engine
@@ -101,8 +126,17 @@ glat_engine.py
   - explicit battle-context lifecycle during attack resolution
   - explicit cleanup/finalization for battle resolution
   - battle-trace data for CLI/GUI/debug surfacing
+  - replay-log snapshots and compact state diffs per applied action
+  - AI planning/debug history for local inspection
   - timing validation for live counter/trigger windows
   - optional effect-choice provider hook for human-controlled choices
+  - shuffled opening setup with hand-before-life ordering and optional mulligan flags
+
+Future match-mode state
+- should explicitly record whether the current match is:
+  - digital_strict
+  - physical_reported
+- this will control whether human reports must come from tracked hand/deck zones or can create/confirm cards from physical-table reports
 
 referee.py
 - currently contains legacy state helper code from the earlier prototype
@@ -132,6 +166,7 @@ cli_game.py
   - interactive human effect choices
   - trigger/counter activation helpers
   - review/correction tooling
+  - replay/diff/AI-debug inspection commands
   - save/load resume flow
 
 cli_intake.py
@@ -144,12 +179,30 @@ cli_intake.py
   - battle-trace formatting and intake-event logging
 
 operator_gui.py
-- thin local operator panel for:
+- local table/operator panel for:
   - state inspection
   - AI turn execution
   - shorthand intake entry
+  - table-shaped zone display for leaders, characters, hand, life, deck/trash, and DON
+  - hidden life display so unrevealed life card identities are not leaked
+  - click-to-inspect card details
+  - horizontally scrollable card zones for full hands and boards
+  - replay timeline review
+  - latest state diff review
+  - AI planning/debug review
   - latest battle trace review
   - save/load and match control
+
+Future match command console
+- should become the primary physical-table intake surface
+- can be either embedded in the GUI or opened as a second window
+- should feel like a match chat / command log:
+  - user enters compact commands
+  - system confirms accepted structured actions
+  - system asks follow-up questions when input is ambiguous
+  - system records manual effect notes and corrections
+  - AI actions and battle results appear in the same timeline
+- this should remain a structured command console, not an unrestricted rules-solving chatbot
 
 Older prototype files
 - board_gui.py
@@ -173,7 +226,7 @@ Needs:
 - move legal action generation closer to engine ownership, or clearly define why it stays in referee.py
 - clean up duplicated prototype logic so the project has one clear game-state path
 - decide on one canonical saved-state file for engine games
-- improve state serialization for replay/debugging
+- continue improving replay/debug serialization and inspection depth
 
 
 Phase B: Full AI Turn Selection
@@ -212,8 +265,12 @@ Goal:
 - let the human play physically and report their moves
 - engine updates internal game state from those reports
 - make the reporting loop clean enough that the AI can react to a reported physical turn without manual reconstruction work
+- support a physical-table mode where the human can report real cards from outside a preloaded engine decklist, while still preserving strict AI legality
 
 Needed features:
+- explicit match mode flag for digital_strict vs physical_reported
+- physical-mode card lookup and dynamic human card instance creation from any known card ID
+- command-console UX for report entry, follow-up prompts, confirmations, and manual effect notes
 - richer prompt-driven flow for reporting real-life opponent turns
 - support for effect resolution that depends on hidden zones or player intent
 - correction/reconciliation flow when the physical game and engine state diverge
@@ -222,15 +279,24 @@ Needed features:
 
 What is still missing:
 - better hidden-information handling when the human intentionally wants to keep some details unknown to the AI
+- flexible physical-table reporting that can accept cards not present in the tracked human hand/deck
+- explicit unsupported-card/effect handling so the app can track a card body without pretending to resolve unimplemented rules text
 - richer attack follow-up prompts and clearer correction/reconciliation UX
 - stronger GUI-native intake flows so the operator does not need to rely on text entry for everything
 - more pressure-testing across long real games to expose reporting friction and drift patterns
 
 Recommended approach:
 - do not use free-form natural language first
-- start with a constrained command syntax or button-driven input
+- start with a constrained command syntax in a match command console, plus button helpers for common actions
 - later add an LLM parser for convenience after the structured path is stable
 - preserve a strict structured path underneath any future shorthand or natural-language convenience layer
+- in physical_reported mode, let the human report a played card by ID even if the engine did not already track it in hand
+- in digital_strict mode, require cards to exist in the proper tracked zone before they can be played
+- every unsupported effect should resolve through one of:
+  - skip effect
+  - manual zone/state changes
+  - record note only
+  - implement the resolver later
 
 
 Phase D: Defense / Reaction System
@@ -316,27 +382,57 @@ Recommended direction:
 
 
 Phase F: Product UI
-Status: Thin local operator GUI implemented and now useful for battle-trace review; richer board UI deferred
+Status: Local table/operator GUI implemented and moving toward a physical-table command-console workflow
 
 Original idea:
 - Streamlit or lightweight Python UI
 
 What exists now:
 - terminal-driven guided app in cli_game.py
-- local operator control panel in operator_gui.py with:
+- local table/operator GUI in operator_gui.py with:
   - current state snapshot
   - AI turn execution
   - shorthand human/opponent report input
+  - table-shaped board zones
+  - compact clickable card tiles
+  - hidden life display
+  - scrollable hand/board/life zones
+  - card details panel
+  - replay back/forward/return-live controls
+  - replay timeline panel
+  - latest state diff panel
+  - AI debug panel
   - battle trace panel
   - intake/action log views
   - save/load and match control
 
 Current recommendation:
-- keep the new local GUI focused on operator/testing workflows
-- do not pivot to a polished table UI until replay/debugging and correction workflows improve further
+- keep the local GUI focused on real match operation, physical-table reporting, and testing
+- build a match command console before chasing polished visuals or card art
+- keep the central board readable enough to validate state, but let the command console carry most intake and clarification work
 
 Next UI option later:
-- richer local board UI once the gameplay loop is more complete
+- richer local board UI and card art once physical reporting and correction flows are reliable
+
+Command console still needed:
+- display the match as a chat-like action timeline
+- accept compact structured commands like:
+  - play OP12-021
+  - attach 1 leader
+  - attack OP12-094 leader
+  - counter OP12-098 leader
+  - take 1 life
+- ask follow-up questions for ambiguous cards, targets, hidden-zone effects, and unsupported effects
+- support physical_reported mode where human-side cards can be instantiated from a card ID lookup
+- support digital_strict mode where commands must reference tracked hand/board/life/deck state
+- let AI actions, battle windows, trigger choices, corrections, and replay markers appear in the same timeline
+
+Replay viewer still needed:
+- step through saved games one action at a time instead of only viewing the latest replay entries
+- select a replay step and inspect the full before/after snapshot, not just the compact diff summary
+- filter by turn, player, or action type so long games stay navigable
+- jump directly from a replay step into the related battle trace or AI debug entry
+- support loading an older saved state and browsing replay history without advancing the game
 
 The old playmat UI can be reused later if desired, but it should not be the main focus now.
 
@@ -379,14 +475,17 @@ Notes:
 Recommended next implementation order:
 
 Current updated order after the intake/parser/operator-GUI and battle-stabilization milestones:
-- 1. Add stronger replay/debug tools for saved game logs, battle traces, snapshots, and state inspection
-- 2. Improve operator UX for correction, reconciliation, and low-friction real-game reporting
-- 3. Move legal action generation closer to engine ownership or formalize its boundary
-- 4. Continue targeted card-effect support only where needed for the chosen deck or new test scenarios
-- 5. Improve AI planning around effect choices, offensive sequencing, and future defensive choices
-- 6. Keep iterating on the local operator GUI only where it improves real-game testing and debugging
-- 7. Add post-game review and lesson tracking
-- 8. Add AI vs AI self-play/training modes on top of the same engine
+- 1. Add explicit match mode support: digital_strict vs physical_reported
+- 2. Build the match command console for physical-table reporting, confirmations, and follow-up prompts
+- 3. Add physical-mode card lookup and dynamic human card instance creation from any known card ID
+- 4. Add unsupported-effect handling paths: skip, manual resolve, note only, implement later
+- 5. Improve correction/reconciliation UX for physical table drift
+- 6. Continue replay/debug work by making replay entries selectable and tied to board snapshots
+- 7. Move legal action generation closer to engine ownership or formalize its boundary
+- 8. Continue targeted card-effect support only where needed for the chosen deck or new test scenarios
+- 9. Improve AI planning around effect choices, offensive sequencing, and future defensive choices
+- 10. Add post-game review and lesson tracking
+- 11. Add AI vs AI self-play/training modes on top of the same engine
 
 
 
@@ -398,11 +497,14 @@ Main risks:
 - human free-text input will be messy unless constrained first
 - adding card effects without a clear effect framework will create technical debt
 - reactive battle timing can become brittle if layered onto the current simplified attack flow without a clearer step model
+- physical_reported mode can create state drift if reported facts are accepted without good confirmation, correction, and audit trails
+- allowing any card ID from the full database can mislead users unless unsupported effects are clearly marked and manually resolved
 
 Guiding principle:
 - correctness > intelligence
 - engine authority > model creativity
 - structured input > free-form parsing
+- physical table authority for human reports, engine authority for AI actions
 
 
 7. Recommended File Direction
@@ -431,7 +533,7 @@ docs/
 
 The next meaningful milestone should be:
 
-"The player can report an entire real-life turn through a guided flow, the engine can be corrected safely when table state drifts, and the AI can respond from the resumed state without reconstruction work."
+"The player can use a real physical deck, report an entire turn through a command-console flow, resolve unsupported effects manually when needed, correct drift safely, and let the AI respond from the resulting state without reconstruction work."
 
 That is the point where GLAT becomes a usable real-world training tool instead of only a simulation prototype.
 

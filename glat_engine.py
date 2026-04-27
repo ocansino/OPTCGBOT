@@ -11,6 +11,7 @@ from referee import get_legal_actions
 
 
 PHASES = ("refresh", "draw", "don", "main", "end")
+MATCH_MODES = ("digital_strict", "physical_reported")
 
 
 class InvalidActionError(ValueError):
@@ -25,10 +26,13 @@ class GLATEngine:
         effect_choice_provider: Optional[Any] = None,
         defense_choice_provider: Optional[Any] = None,
         trigger_choice_provider: Optional[Any] = None,
+        cards_root: str = "cards",
     ) -> None:
         self.cards_path = Path(cards_path)
+        self.cards_root = Path(cards_root)
         self.deck_definition = self._load_deck_definition()
         self.catalog = self._build_catalog()
+        self.full_catalog = self._build_full_catalog()
         self.instance_counters: Dict[str, int] = {"P1": 0, "P2": 0}
         self.agent = agent or GeminiAgent()
         self.effect_choice_provider = effect_choice_provider
@@ -46,10 +50,36 @@ class GLATEngine:
             if card.get("id")
         }
 
+    def _build_full_catalog(self) -> Dict[str, Dict[str, Any]]:
+        catalog = dict(self.catalog)
+        card_files_root = self.cards_root / "cards"
+        if not card_files_root.exists():
+            return catalog
+
+        for card_file in card_files_root.glob("*/*.json"):
+            try:
+                with card_file.open("r", encoding="utf-8") as file:
+                    card = json.load(file)
+            except (OSError, json.JSONDecodeError):
+                continue
+            card_id = card.get("id")
+            if card_id:
+                catalog.setdefault(card_id.upper(), card)
+        return catalog
+
+    def lookup_card_data(self, card_id: str) -> Optional[Dict[str, Any]]:
+        if not card_id:
+            return None
+        return self.full_catalog.get(card_id.upper())
+
     def _card_types(self, card_or_id: Any) -> List[str]:
         if isinstance(card_or_id, str):
-            return self.catalog[card_or_id.upper()].get("types", [])
-        return self.catalog[card_or_id["card_id"].upper()].get("types", [])
+            card_data = self.lookup_card_data(card_or_id)
+        else:
+            card_data = self.lookup_card_data(card_or_id["card_id"])
+        if card_data is None:
+            return []
+        return card_data.get("types", [])
 
     def _leader_has_type(self, player: Dict[str, Any], type_name: str) -> bool:
         return type_name in self._card_types(player["leader"]["card_id"])
@@ -92,11 +122,11 @@ class GLATEngine:
 
     def build_card_instance(self, player_id: str, card_id: str) -> Dict[str, Any]:
         normalized_id = card_id.upper()
-        if normalized_id not in self.catalog:
+        source = self.lookup_card_data(normalized_id)
+        if source is None:
             raise ValueError(f"Unknown card id: {normalized_id}")
 
         self.instance_counters[player_id] += 1
-        source = self.catalog[normalized_id]
         printed_cost = source.get("cost") or 0
         return {
             "instance_id": f"{player_id}-CARD-{self.instance_counters[player_id]:03d}",
@@ -115,7 +145,12 @@ class GLATEngine:
         }
 
     def _build_player_state(
-        self, player_id: str, leader_card: Dict[str, Any], deck_ids: List[str], rng: random.Random
+        self,
+        player_id: str,
+        leader_card: Dict[str, Any],
+        deck_ids: List[str],
+        rng: random.Random,
+        mulligan: bool = False,
     ) -> Dict[str, Any]:
         shuffled_ids = list(deck_ids)
         rng.shuffle(shuffled_ids)
@@ -130,8 +165,14 @@ class GLATEngine:
             "state": "active",
         }
         life = self._leader_life(leader_card)
-        life_cards = [deck.pop(0) for _ in range(life)]
         hand = [deck.pop(0) for _ in range(5)]
+        mulligan_used = False
+        if mulligan:
+            deck.extend(hand)
+            rng.shuffle(deck)
+            hand = [deck.pop(0) for _ in range(5)]
+            mulligan_used = True
+        life_cards = [deck.pop(0) for _ in range(life)]
 
         return {
             "life": life,
@@ -146,24 +187,49 @@ class GLATEngine:
             "attached_don": {},
             "leader": leader,
             "turn_flags": {},
+            "mulligan_used": mulligan_used,
         }
 
-    def create_initial_state(self, seed: int = 7) -> Dict[str, Any]:
+    def create_initial_state(
+        self,
+        seed: int = 7,
+        mulligans: Optional[Dict[str, bool]] = None,
+        match_mode: str = "digital_strict",
+    ) -> Dict[str, Any]:
+        if match_mode not in MATCH_MODES:
+            raise ValueError(f"Invalid match_mode: {match_mode}")
         self.instance_counters = {"P1": 0, "P2": 0}
         leader_card, deck_ids = self._deck_entries()
         rng = random.Random(seed)
+        mulligans = mulligans or {}
 
         state = {
             "turn": 1,
+            "match_mode": match_mode,
             "active_player": "P1",
             "first_player": "P1",
             "phase": "refresh",
             "winner": None,
             "battle_context": None,
             "logs": [],
+            "command_console": [],
+            "replay_log": [],
+            "ai_debug_history": [],
             "players": {
-                "P1": self._build_player_state("P1", leader_card, deck_ids, rng),
-                "P2": self._build_player_state("P2", leader_card, deck_ids, rng),
+                "P1": self._build_player_state(
+                    "P1",
+                    leader_card,
+                    deck_ids,
+                    rng,
+                    mulligan=bool(mulligans.get("P1")),
+                ),
+                "P2": self._build_player_state(
+                    "P2",
+                    leader_card,
+                    deck_ids,
+                    rng,
+                    mulligan=bool(mulligans.get("P2")),
+                ),
             },
         }
         self.validate_state(state)
@@ -190,8 +256,13 @@ class GLATEngine:
         self.instance_counters = counters
 
     def _normalize_loaded_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        state.setdefault("match_mode", "digital_strict")
+        state.setdefault("command_console", [])
+        state.setdefault("pending_console_prompt", None)
         state.setdefault("winner", None)
         state.setdefault("logs", [])
+        state.setdefault("replay_log", [])
+        state.setdefault("ai_debug_history", [])
         state.setdefault("first_player", "P1")
         state.setdefault("battle_context", None)
 
@@ -201,6 +272,7 @@ class GLATEngine:
             player.setdefault("life_cards", [])
             player.setdefault("spent_don", [])
             player.setdefault("turn_flags", {})
+            player.setdefault("mulligan_used", False)
             for zone in ("board", "hand", "deck", "trash", "life_cards"):
                 for card in player.get(zone, []):
                     card.setdefault("base_cost", card.get("cost", 0) or 0)
@@ -314,6 +386,142 @@ class GLATEngine:
         if state["active_player"] == player_id:
             attached = player["attached_don"].get(card["instance_id"], 0)
         return (card.get("power") or 0) + (attached * 1000) + (card.get("battle_power_bonus") or 0)
+
+    def _replay_card_snapshot(
+        self,
+        state: Dict[str, Any],
+        player: Dict[str, Any],
+        card: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        return {
+            "instance_id": card["instance_id"],
+            "card_id": card["card_id"],
+            "state": card.get("state", "active"),
+            "power": self._current_power(state, player, card),
+            "attached_don": player["attached_don"].get(card["instance_id"], 0),
+        }
+
+    def _snapshot_state_for_replay(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        snapshot: Dict[str, Any] = {
+            "turn": state["turn"],
+            "match_mode": state.get("match_mode", "digital_strict"),
+            "active_player": state["active_player"],
+            "phase": state["phase"],
+            "winner": state["winner"],
+            "players": {},
+        }
+        for player_id, player in state["players"].items():
+            snapshot["players"][player_id] = {
+                "life": player["life"],
+                "hand_count": len(player["hand"]),
+                "hand_cards": [card["card_id"] for card in player["hand"]],
+                "deck_count": len(player["deck"]),
+                "trash_count": len(player.get("trash", [])),
+                "trash_cards": [card["card_id"] for card in player.get("trash", [])[-6:]],
+                "life_cards_count": len(player.get("life_cards", [])),
+                "life_cards": [card["card_id"] for card in player.get("life_cards", [])],
+                "don_area_count": len(player["don_area"]),
+                "spent_don_count": len(player.get("spent_don", [])),
+                "attached_don_total": sum(player["attached_don"].values()),
+                "attached_don": dict(player["attached_don"]),
+                "leader": self._replay_card_snapshot(state, player, player["leader"]),
+                "board": [
+                    self._replay_card_snapshot(state, player, card)
+                    for card in player["board"]
+                ],
+            }
+        return snapshot
+
+    def _append_if_changed(
+        self,
+        changes: List[str],
+        label: str,
+        before: Any,
+        after: Any,
+    ) -> None:
+        if before != after:
+            changes.append(f"{label}: {before} -> {after}")
+
+    def _diff_replay_snapshots(
+        self,
+        before: Dict[str, Any],
+        after: Dict[str, Any],
+    ) -> List[str]:
+        changes: List[str] = []
+        self._append_if_changed(changes, "turn", before["turn"], after["turn"])
+        self._append_if_changed(changes, "active_player", before["active_player"], after["active_player"])
+        self._append_if_changed(changes, "phase", before["phase"], after["phase"])
+        self._append_if_changed(changes, "winner", before["winner"], after["winner"])
+
+        for player_id in ("P1", "P2"):
+            before_player = before["players"][player_id]
+            after_player = after["players"][player_id]
+            prefix = f"{player_id}"
+            for key in (
+                "life",
+                "hand_count",
+                "deck_count",
+                "trash_count",
+                "life_cards_count",
+                "don_area_count",
+                "spent_don_count",
+                "attached_don_total",
+            ):
+                self._append_if_changed(
+                    changes,
+                    f"{prefix} {key}",
+                    before_player[key],
+                    after_player[key],
+                )
+            self._append_if_changed(
+                changes,
+                f"{prefix} leader state",
+                before_player["leader"]["state"],
+                after_player["leader"]["state"],
+            )
+            self._append_if_changed(
+                changes,
+                f"{prefix} leader power",
+                before_player["leader"]["power"],
+                after_player["leader"]["power"],
+            )
+
+            before_board = {card["instance_id"]: card for card in before_player["board"]}
+            after_board = {card["instance_id"]: card for card in after_player["board"]}
+            added_board = [
+                f"{card['card_id']} ({card['instance_id']})"
+                for instance_id, card in after_board.items()
+                if instance_id not in before_board
+            ]
+            removed_board = [
+                f"{card['card_id']} ({card['instance_id']})"
+                for instance_id, card in before_board.items()
+                if instance_id not in after_board
+            ]
+            if added_board:
+                changes.append(f"{prefix} board added: {', '.join(added_board)}")
+            if removed_board:
+                changes.append(f"{prefix} board removed: {', '.join(removed_board)}")
+            for instance_id, before_card in before_board.items():
+                after_card = after_board.get(instance_id)
+                if after_card is None:
+                    continue
+                if before_card["state"] != after_card["state"]:
+                    changes.append(
+                        f"{prefix} {before_card['card_id']} ({instance_id}) state: "
+                        f"{before_card['state']} -> {after_card['state']}"
+                    )
+                if before_card["power"] != after_card["power"]:
+                    changes.append(
+                        f"{prefix} {before_card['card_id']} ({instance_id}) power: "
+                        f"{before_card['power']} -> {after_card['power']}"
+                    )
+                if before_card["attached_don"] != after_card["attached_don"]:
+                    changes.append(
+                        f"{prefix} {before_card['card_id']} ({instance_id}) attached DON: "
+                        f"{before_card['attached_don']} -> {after_card['attached_don']}"
+                    )
+        return changes
 
     def _effective_play_cost(self, player: Dict[str, Any], card: Dict[str, Any]) -> int:
         cost = card.get("base_cost", card.get("cost", 0)) or 0
@@ -1796,6 +2004,8 @@ class GLATEngine:
             raise ValueError("active_player must be P1 or P2")
         if state["phase"] not in PHASES:
             raise ValueError(f"Invalid phase: {state['phase']}")
+        if state.get("match_mode") not in MATCH_MODES:
+            raise ValueError(f"Invalid match_mode: {state.get('match_mode')}")
         battle_context = state.get("battle_context")
         if battle_context is not None:
             if battle_context.get("attacking_player") not in ("P1", "P2"):
@@ -1854,14 +2064,33 @@ class GLATEngine:
         player_id: str,
         action: Dict[str, Any],
         result: Dict[str, Any],
+        before_snapshot: Optional[Dict[str, Any]] = None,
     ) -> None:
-        state["logs"].append(
+        replay_index = len(state.get("replay_log", [])) + 1
+        after_snapshot = self._snapshot_state_for_replay(state)
+        before_view = before_snapshot or after_snapshot
+        diff_lines = self._diff_replay_snapshots(before_view, after_snapshot)
+        log_entry = {
+            "turn": state["turn"],
+            "phase": state["phase"],
+            "player": player_id,
+            "action": copy.deepcopy(action),
+            "result": copy.deepcopy(result),
+            "replay_index": replay_index,
+            "diff_summary": diff_lines[:3],
+        }
+        state["logs"].append(log_entry)
+        state.setdefault("replay_log", []).append(
             {
+                "index": replay_index,
                 "turn": state["turn"],
                 "phase": state["phase"],
                 "player": player_id,
                 "action": copy.deepcopy(action),
                 "result": copy.deepcopy(result),
+                "before": before_view,
+                "after": after_snapshot,
+                "diff_lines": diff_lines,
             }
         )
 
@@ -1909,9 +2138,23 @@ class GLATEngine:
         planned_indices = self.agent.get_turn_plan(state, legal_actions)
         if not isinstance(planned_indices, list) or not planned_indices:
             planned_indices = [len(legal_actions) - 1]
+        ai_debug_entry = {
+            "turn": state["turn"],
+            "player": state["active_player"],
+            "phase": state["phase"],
+            "legal_actions": [copy.deepcopy(action) for action in legal_actions],
+            "planned_indices": list(planned_indices),
+            "planned_actions": [
+                copy.deepcopy(legal_actions[index])
+                for index in planned_indices
+                if isinstance(index, int) and 0 <= index < len(legal_actions)
+            ],
+            "executed_actions": [],
+            "fallback_end_turn": False,
+        }
+        state.setdefault("ai_debug_history", []).append(ai_debug_entry)
 
         max_actions_per_turn = 6
-        actions_taken = 0
 
         for raw_index in planned_indices[:max_actions_per_turn]:
             if state["winner"]:
@@ -1922,15 +2165,29 @@ class GLATEngine:
 
             action = copy.deepcopy(legal_actions[raw_index])
             if not self.is_valid_action(state, action):
+                ai_debug_entry["executed_actions"].append(
+                    {
+                        "status": "skipped_invalid",
+                        "planned_index": raw_index,
+                        "action": copy.deepcopy(action),
+                    }
+                )
                 break
 
             self.apply_action(state, action)
-            actions_taken += 1
+            ai_debug_entry["executed_actions"].append(
+                {
+                    "status": "applied",
+                    "planned_index": raw_index,
+                    "action": copy.deepcopy(action),
+                }
+            )
             if action["type"] == "end_turn":
                 return
 
         fallback_end_turn = {"type": "end_turn", "payload": {}}
         if self.is_valid_action(state, fallback_end_turn):
+            ai_debug_entry["fallback_end_turn"] = True
             self.apply_action(state, fallback_end_turn)
 
     def end_phase(self, state: Dict[str, Any]) -> None:
@@ -2024,6 +2281,7 @@ class GLATEngine:
         opponent = self.get_inactive_player(state)
         payload = action.get("payload", {})
         result: Dict[str, Any]
+        before_snapshot = self._snapshot_state_for_replay(state)
 
         if action["type"] == "play_card":
             instance_id = payload["card_id"]
@@ -2074,7 +2332,7 @@ class GLATEngine:
         else:
             result = {"ended_turn": True}
 
-        self.log_action(state, player_id, action, result)
+        self.log_action(state, player_id, action, result, before_snapshot=before_snapshot)
         self.validate_state(state)
         return result
 

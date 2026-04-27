@@ -1,3 +1,4 @@
+import random
 import unittest
 from pathlib import Path
 
@@ -75,6 +76,50 @@ class GLATEngineTests(unittest.TestCase):
     def setUp(self) -> None:
         self.agent = FakeAgent()
         self.engine = SpyEngine(agent=self.agent)
+
+    def test_initial_setup_deals_opening_hand_before_life(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        _, deck_ids = self.engine._deck_entries()
+        expected_order = list(deck_ids)
+        random.Random(7).shuffle(expected_order)
+        player = state["players"]["P1"]
+
+        self.assertEqual([card["card_id"] for card in player["hand"]], expected_order[:5])
+        self.assertEqual([card["card_id"] for card in player["life_cards"]], expected_order[5:9])
+        self.assertEqual(len(player["deck"]), 41)
+        self.assertFalse(player["mulligan_used"])
+        self.assertEqual(state["match_mode"], "digital_strict")
+        self.assertEqual(state["command_console"], [])
+
+    def test_initial_state_accepts_physical_reported_match_mode(self) -> None:
+        state = self.engine.create_initial_state(seed=7, match_mode="physical_reported")
+
+        self.assertEqual(state["match_mode"], "physical_reported")
+
+    def test_lookup_card_data_reads_full_card_database(self) -> None:
+        card = self.engine.lookup_card_data("OP12-021")
+
+        self.assertIsNotNone(card)
+        self.assertEqual(card["name"], "Ipponmatsu")
+
+    def test_initial_state_rejects_unknown_match_mode(self) -> None:
+        with self.assertRaises(ValueError):
+            self.engine.create_initial_state(seed=7, match_mode="loosey_goosey")
+
+    def test_initial_setup_can_apply_one_opening_mulligan_before_life(self) -> None:
+        kept_state = self.engine.create_initial_state(seed=7)
+        mulligan_state = self.engine.create_initial_state(seed=7, mulligans={"P1": True})
+        kept_player = kept_state["players"]["P1"]
+        mulligan_player = mulligan_state["players"]["P1"]
+
+        self.assertTrue(mulligan_player["mulligan_used"])
+        self.assertEqual(len(mulligan_player["hand"]), 5)
+        self.assertEqual(len(mulligan_player["life_cards"]), mulligan_player["life"])
+        self.assertEqual(len(mulligan_player["deck"]), 41)
+        self.assertNotEqual(
+            [card["instance_id"] for card in kept_player["hand"]],
+            [card["instance_id"] for card in mulligan_player["hand"]],
+        )
 
     def test_turn_progression_runs_ten_turns(self) -> None:
         state = self.engine.run_game(max_turns=10, seed=7)
@@ -792,6 +837,8 @@ class GLATEngineTests(unittest.TestCase):
     def test_manual_resolve_life_damage_adds_card_to_hand(self) -> None:
         state = self.engine.create_initial_state(seed=7)
         player = state["players"]["P2"]
+        player["life_cards"][0]["card_id"] = "OP12-094"
+        player["life_cards"][0]["name"] = "Monkey.D.Dragon"
         top_life = player["life_cards"][0]["instance_id"]
         starting_hand = len(player["hand"])
 
@@ -929,6 +976,8 @@ class GLATEngineTests(unittest.TestCase):
         player["deck"] = [self.engine.build_card_instance("P2", "OP12-086")]
         opponent["hand"] = []
         opponent["board"] = []
+        opponent["life_cards"][0]["card_id"] = "OP12-094"
+        opponent["life_cards"][0]["name"] = "Monkey.D.Dragon"
         opponent_starting_hand = len(opponent["hand"])
         player_starting_hand = len(player["hand"])
 
@@ -1060,6 +1109,8 @@ class GLATEngineTests(unittest.TestCase):
         attacker["played_turn"] = 2
         attacker_player["board"] = [attacker]
         defender_player["hand"] = []
+        defender_player["life_cards"][0]["card_id"] = "OP12-094"
+        defender_player["life_cards"][0]["name"] = "Monkey.D.Dragon"
 
         result = self.engine.apply_action(
             state,
@@ -1122,6 +1173,10 @@ class GLATEngineTests(unittest.TestCase):
         self.assertGreaterEqual(len(state["logs"]), 2)
         self.assertEqual(state["logs"][-1]["action"]["type"], "end_turn")
         self.assertTrue(all(self.engine.applied_action_validity))
+        self.assertTrue(state["replay_log"])
+        self.assertIn("diff_lines", state["replay_log"][-1])
+        self.assertTrue(state["ai_debug_history"])
+        self.assertEqual(state["ai_debug_history"][-1]["turn"], 1)
 
     def test_stale_plan_falls_back_to_end_turn(self) -> None:
         engine = SpyEngine(agent=StalePlanAgent())
@@ -1135,6 +1190,27 @@ class GLATEngineTests(unittest.TestCase):
 
         self.assertEqual(state["logs"][-1]["action"]["type"], "end_turn")
         self.assertTrue(all(engine.applied_action_validity))
+
+    def test_replay_log_records_before_after_and_diff(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        self.engine.refresh_phase(state)
+        self.engine.draw_phase(state)
+        self.engine.don_phase(state)
+        state["phase"] = "main"
+        player = state["players"]["P1"]
+        target = player["leader"]
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "attach_don", "payload": {"card_id": target["instance_id"], "amount": 1}},
+        )
+
+        self.assertEqual(result["attached_to"], target["instance_id"])
+        replay_entry = state["replay_log"][-1]
+        self.assertEqual(replay_entry["action"]["type"], "attach_don")
+        self.assertIn("before", replay_entry)
+        self.assertIn("after", replay_entry)
+        self.assertTrue(any("attached" in line.lower() for line in replay_entry["diff_lines"]))
 
 
 if __name__ == "__main__":

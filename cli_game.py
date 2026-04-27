@@ -29,14 +29,115 @@ class FakePlanningAgent:
     def __init__(self) -> None:
         self.calls = 0
 
+    def _choose_attach_action(
+        self,
+        state: Dict[str, Any],
+        legal_actions: List[Dict[str, Any]],
+    ) -> Optional[int]:
+        attach_candidates = [
+            (index, action)
+            for index, action in enumerate(legal_actions)
+            if action["type"] == "attach_don"
+        ]
+        if not attach_candidates:
+            return None
+
+        player = state["players"][state["active_player"]]
+        attackers = [player["leader"], *player["board"]]
+        ready_attackers = [
+            card for card in attackers
+            if card.get("state") == "active"
+            and not (card["instance_id"] != player["leader"]["instance_id"] and card.get("played_turn") == state["turn"])
+        ]
+        if not ready_attackers:
+            return None
+
+        preferred_target = max(
+            ready_attackers,
+            key=lambda card: (
+                card.get("power", 0),
+                card["instance_id"] == player["leader"]["instance_id"],
+                card.get("cost", 0),
+            ),
+        )["instance_id"]
+        preferred_attaches = [
+            (index, action)
+            for index, action in attach_candidates
+            if action["payload"]["card_id"] == preferred_target
+        ]
+        if not preferred_attaches:
+            preferred_attaches = attach_candidates
+        best_index, _ = max(
+            preferred_attaches,
+            key=lambda item: item[1]["payload"].get("amount", 0),
+        )
+        return best_index
+
+    def _choose_attack_actions(
+        self,
+        legal_actions: List[Dict[str, Any]],
+    ) -> List[int]:
+        grouped: Dict[str, List[tuple[int, Dict[str, Any]]]] = {}
+        for index, action in enumerate(legal_actions):
+            if action["type"] != "attack":
+                continue
+            grouped.setdefault(action["payload"]["attacker_id"], []).append((index, action))
+
+        chosen: List[tuple[int, Dict[str, Any]]] = []
+        for actions in grouped.values():
+            preferred = next(
+                ((index, action) for index, action in actions if action["payload"]["target"] == "leader"),
+                None,
+            )
+            if preferred is None:
+                preferred = min(
+                    actions,
+                    key=lambda item: item[1]["payload"]["target"],
+                )
+            chosen.append(preferred)
+
+        chosen.sort(
+            key=lambda item: (
+                item[1]["payload"]["attacker_id"].endswith("LEADER"),
+                item[1]["payload"]["attacker_id"],
+            )
+        )
+        return [index for index, _ in chosen]
+
+    def _choose_play_action(self, legal_actions: List[Dict[str, Any]]) -> Optional[int]:
+        play_candidates = [
+            (index, action)
+            for index, action in enumerate(legal_actions)
+            if action["type"] == "play_card"
+        ]
+        if not play_candidates:
+            return None
+        return min(play_candidates, key=lambda item: item[1]["payload"]["card_id"])[0]
+
     def get_turn_plan(self, state: Dict[str, Any], legal_actions: List[Dict[str, Any]]) -> List[int]:
         self.calls += 1
-        non_end = [
-            index for index, action in enumerate(legal_actions) if action["type"] != "end_turn"
-        ]
-        if not non_end:
-            return [len(legal_actions) - 1]
-        return non_end[:2] + [len(legal_actions) - 1]
+        end_index = next(
+            (index for index, action in enumerate(legal_actions) if action["type"] == "end_turn"),
+            len(legal_actions) - 1,
+        )
+        plan: List[int] = []
+
+        play_index = self._choose_play_action(legal_actions)
+        if play_index is not None:
+            plan.append(play_index)
+
+        attach_index = self._choose_attach_action(state, legal_actions)
+        if attach_index is not None:
+            plan.append(attach_index)
+
+        attack_indices = self._choose_attack_actions(legal_actions)
+        for attack_index in attack_indices:
+            if attack_index not in plan:
+                plan.append(attack_index)
+
+        if not plan:
+            return [end_index]
+        return plan[:5] + [end_index]
 
 
 def card_label(card: Dict[str, Any]) -> str:
@@ -222,6 +323,58 @@ def print_recent_logs(state: Dict[str, Any], count: int = 8) -> None:
         )
 
 
+def print_recent_replay(state: Dict[str, Any], count: int = 6) -> None:
+    entries = state.get("replay_log", [])[-count:]
+    if not entries:
+        print("No replay entries yet.")
+        return
+    for entry in entries:
+        action = entry["action"]
+        summary = ", ".join(entry.get("diff_lines", [])[:3]) or "no visible state change"
+        print(
+            f"#{entry['index']} | Turn {entry['turn']} {entry['player']} "
+            f"{action['type']}: {summary}"
+        )
+
+
+def print_latest_state_diff(state: Dict[str, Any]) -> None:
+    entries = state.get("replay_log", [])
+    if not entries:
+        print("No replay entries yet.")
+        return
+    latest = entries[-1]
+    print(
+        f"Latest replay diff | step {latest['index']} | "
+        f"turn {latest['turn']} | {latest['player']} {latest['action']['type']}"
+    )
+    diff_lines = latest.get("diff_lines", [])
+    if not diff_lines:
+        print("  No visible state changes recorded.")
+        return
+    for line in diff_lines:
+        print(f"  - {line}")
+
+
+def print_recent_ai_debug(state: Dict[str, Any], count: int = 3) -> None:
+    entries = state.get("ai_debug_history", [])[-count:]
+    if not entries:
+        print("No AI debug entries yet.")
+        return
+    for entry in entries:
+        print(
+            f"AI debug | Turn {entry['turn']} {entry['player']} | "
+            f"legal {len(entry.get('legal_actions', []))} | "
+            f"planned {entry.get('planned_indices', [])} | "
+            f"fallback_end_turn={entry.get('fallback_end_turn', False)}"
+        )
+        for executed in entry.get("executed_actions", []):
+            action = executed.get("action", {})
+            print(
+                f"  - {executed.get('status', 'unknown')}: "
+                f"{action.get('type', '-')}"
+            )
+
+
 def print_help() -> None:
     print(
         """
@@ -233,6 +386,9 @@ Commands:
   trash                        Show both trash piles
   life_cards                   Show life-card zones tracked by manual effects
   logs                         Show recent action logs
+  replay                       Show recent replay timeline entries
+  diff                         Show the latest replay state diff
+  ai_debug                     Show recent AI planning/debug entries
   actions                      Show all legal actions
   do <index>                   Execute a legal action by index
   play <instance_id>           Play a card from your hand
@@ -792,6 +948,18 @@ def run_manual_command(engine: GLATEngine, state: Dict[str, Any], command: str) 
         if verb == "trigger" and len(parts) in (2, 3):
             player_id = player_arg(parts, 2, owner_from_instance(parts[1]))
             print("Trigger:", engine.manual_activate_trigger(state, player_id, parts[1]))
+            return True
+
+        if verb == "replay" and len(parts) == 1:
+            print_recent_replay(state)
+            return True
+
+        if verb == "diff" and len(parts) == 1:
+            print_latest_state_diff(state)
+            return True
+
+        if verb == "ai_debug" and len(parts) == 1:
+            print_recent_ai_debug(state)
             return True
 
         if verb == "set_state" and len(parts) == 3:
