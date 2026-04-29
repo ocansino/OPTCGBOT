@@ -1212,6 +1212,26 @@ class GLATEngineTests(unittest.TestCase):
         self.assertIn("after", replay_entry)
         self.assertTrue(any("attached" in line.lower() for line in replay_entry["diff_lines"]))
 
+    def test_op12_021_is_supported_as_printed_blocker(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 4
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+        attacker = state["players"]["P1"]["leader"]
+        blocker = self.engine.build_card_instance("P2", "OP12-021")
+        blocker["played_turn"] = 2
+        state["players"]["P2"]["board"] = [blocker]
+        state["players"]["P2"]["hand"] = []
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "attack", "payload": {"attacker_id": attacker["instance_id"], "target": "leader"}},
+        )
+
+        self.assertEqual(result["final_target"], blocker["instance_id"])
+        self.assertEqual(result["defense"]["blocker_id"], blocker["instance_id"])
+        self.assertTrue(any(card["instance_id"] == blocker["instance_id"] for card in state["players"]["P2"]["trash"]))
+
 
 if __name__ == "__main__":
     unittest.main()

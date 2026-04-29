@@ -95,10 +95,18 @@
       "phase": "end",
       "speaker": "AI",
       "kind": "ai",
-      "message": "Ran AI turn."
+      "message": "Attach 1 DON to P1-LEADER: attached 1 DON to P1-LEADER"
     },
     {
       "index": 3,
+      "turn": 2,
+      "phase": "end",
+      "speaker": "AI",
+      "kind": "ai",
+      "message": "End turn: ended turn"
+    },
+    {
+      "index": 4,
       "turn": 2,
       "phase": "main",
       "speaker": "System",
@@ -106,22 +114,22 @@
       "message": "Human turn prepared for opponent intake."
     },
     {
-      "index": 4,
+      "index": 5,
       "turn": 2,
       "phase": "main",
       "speaker": "You",
       "kind": "command",
-      "message": "Played OP12-097",
-      "command": "Played OP12-097"
+      "message": "play OP12-097",
+      "command": "play OP12-097"
     },
     {
-      "index": 5,
+      "index": 6,
       "turn": 2,
       "phase": "main",
       "speaker": "System",
       "kind": "success",
-      "message": "Applied shorthand: Played OP12-097",
-      "command": "Played OP12-097"
+      "message": "Applied shorthand: play OP12-097",
+      "command": "play OP12-097"
     }
   ],
   "replay_log": [

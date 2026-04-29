@@ -96,6 +96,9 @@ class GLATEngine:
             return self._leader_has_type(player, "Revolutionary Army")
         if card_id == "OP12-087":
             return player["leader"]["card_id"] in {"OP12-081"}
+        if card_id == "OP12-021":
+            card_data = self.lookup_card_data(card_id) or {}
+            return "[Blocker]" in (card_data.get("effect") or "")
         return False
 
     def _leader_life(self, leader_card: Dict[str, Any]) -> int:
@@ -1737,6 +1740,7 @@ class GLATEngine:
         position: str = "bottom",
     ) -> Dict[str, Any]:
         player = state["players"][player_id]
+        before_snapshot = self._snapshot_state_for_replay(state)
         card = self._remove_card_from_zone(player, instance_id, source_zone)
         self._add_card_to_zone(player, card, destination_zone, position)
         result = {
@@ -1759,6 +1763,7 @@ class GLATEngine:
                 },
             },
             result,
+            before_snapshot=before_snapshot,
         )
         self.validate_state(state)
         return result
@@ -1776,6 +1781,7 @@ class GLATEngine:
         card = self._find_card_by_instance(player, instance_id)
         if card is None:
             raise ValueError(f"Card {instance_id} not found for player {player_id}")
+        before_snapshot = self._snapshot_state_for_replay(state)
         old_state = card.get("state", "active")
         card["state"] = new_state
         result = {
@@ -1792,6 +1798,7 @@ class GLATEngine:
                 "payload": {"card_id": instance_id, "state": new_state},
             },
             result,
+            before_snapshot=before_snapshot,
         )
         self.validate_state(state)
         return result
