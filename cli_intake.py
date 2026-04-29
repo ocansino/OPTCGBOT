@@ -174,7 +174,8 @@ def build_card_reference_lookup(engine: Any) -> Dict[str, str]:
         return cached_lookup
 
     lookup: Dict[str, str] = {}
-    for card_id, card in engine.catalog.items():
+    source_catalog = getattr(engine, "full_catalog", None) or engine.catalog
+    for card_id, card in source_catalog.items():
         lookup[normalize_card_reference(card_id)] = card_id
         lookup[normalize_card_reference(card.get("name", card_id))] = card_id
     engine._cli_card_reference_lookup = lookup
@@ -550,8 +551,6 @@ def find_legal_attack_action(
         card_label,
         include_leader=True,
     )
-    if attacker is None:
-        return None
 
     target = "leader"
     if not is_leader_reference(target_ref):
@@ -568,7 +567,56 @@ def find_legal_attack_action(
             return None
         target = target_card["instance_id"]
 
-    for action in get_legal_actions(state, engine):
+    legal_actions = get_legal_actions(state, engine)
+    if attacker is None:
+        resolved_card_id = resolve_card_reference(engine, attacker_ref)
+        normalized_reference = normalize_card_reference(attacker_ref)
+        matching_attack_actions: List[Dict[str, Any]] = []
+        player = state["players"][HUMAN_PLAYER]
+        attackable_cards = [player["leader"], *player.get("board", [])]
+        for action in legal_actions:
+            if action["type"] != "attack" or action["payload"]["target"] != target:
+                continue
+            candidate = next(
+                (
+                    card for card in attackable_cards
+                    if card["instance_id"] == action["payload"]["attacker_id"]
+                ),
+                None,
+            )
+            if candidate is None:
+                continue
+            if normalize_card_reference(candidate["instance_id"]) == normalized_reference:
+                matching_attack_actions.append(action)
+            elif resolved_card_id is not None and candidate.get("card_id") == resolved_card_id:
+                matching_attack_actions.append(action)
+            elif normalized_reference and normalize_card_reference(candidate.get("name", "")) == normalized_reference:
+                matching_attack_actions.append(action)
+
+        if len(matching_attack_actions) == 1:
+            return matching_attack_actions[0]
+        if matching_attack_actions:
+            attacker_ids = {action["payload"]["attacker_id"] for action in matching_attack_actions}
+            matching_attackers = [
+                card for card in attackable_cards
+                if card["instance_id"] in attacker_ids
+            ]
+            chosen = choose_card_from_matches(
+                f"Choose matching legal attacker for '{attacker_ref}'",
+                matching_attackers,
+                choose_from_menu,
+                card_label,
+            )
+            if chosen is None:
+                return None
+            return next(
+                action
+                for action in matching_attack_actions
+                if action["payload"]["attacker_id"] == chosen["instance_id"]
+            )
+        return None
+
+    for action in legal_actions:
         if (
             action["type"] == "attack"
             and action["payload"]["attacker_id"] == attacker["instance_id"]

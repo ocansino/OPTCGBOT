@@ -391,6 +391,23 @@ class OperatorGuiHelperTests(unittest.TestCase):
         self.assertTrue(any("Battle | status" in line for line in battle_lines))
         self.assertTrue(any("damage_resolution" in line or "cleanup" in line for line in battle_lines))
 
+    def test_duplicate_attack_reference_uses_only_legal_matching_copy(self) -> None:
+        state = self.engine.create_initial_state(seed=7, match_mode="physical_reported")
+        state["turn"] = 4
+        state["active_player"] = HUMAN_PLAYER
+        state["phase"] = "main"
+        older = self.engine.build_card_instance(HUMAN_PLAYER, "OP06-090")
+        newer = self.engine.build_card_instance(HUMAN_PLAYER, "OP06-090")
+        older["played_turn"] = 3
+        newer["played_turn"] = 4
+        state["players"][HUMAN_PLAYER]["board"] = [older, newer]
+
+        changed, message = process_console_command(self.engine, state, "attack OP06-090 leader")
+
+        self.assertTrue(changed, msg=message)
+        self.assertEqual(older["state"], "rested")
+        self.assertEqual(newer["state"], "active")
+
     def test_collect_replay_and_diff_lines_after_command(self) -> None:
         state = self.engine.create_initial_state(seed=7)
         state["turn"] = 3

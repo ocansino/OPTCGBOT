@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GLAT Web Cockpit</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>GLAT Cockpit</h1>
+          <div id="matchMeta" class="match-meta">Loading match...</div>
+        </div>
+        <div class="top-actions">
+          <button id="refreshBtn" type="button">Refresh</button>
+          <button id="newGameBtn" type="button">New Game</button>
+          <button id="saveBtn" type="button">Save</button>
+        </div>
+      </header>
+
+      <main class="cockpit-grid">
+        <section class="board-panel" aria-label="Board state">
+          <div id="aiBoard" class="player-board"></div>
+          <div id="battleTrace" class="trace-strip"></div>
+          <div id="humanBoard" class="player-board"></div>
+        </section>
+
+        <aside class="command-panel" aria-label="Match command console">
+          <section id="promptPanel" class="prompt-panel hidden"></section>
+
+          <div class="control-row">
+            <button id="prepareBtn" type="button">Prepare Human</button>
+            <button id="endHumanBtn" type="button">End Human</button>
+            <button id="runAiBtn" type="button">Run AI</button>
+          </div>
+
+          <div class="side-tabs" role="tablist" aria-label="Side panel view">
+            <button id="chatTabBtn" class="active" type="button">Chat</button>
+            <button id="replayTabBtn" type="button">Replay</button>
+          </div>
+
+          <section id="chatPane" class="tab-pane active">
+            <section id="consoleLog" class="console-log" aria-live="polite"></section>
+          </section>
+
+          <section id="replayPane" class="tab-pane">
+            <div id="replayList" class="replay-list"></div>
+            <div class="replay-detail-header">
+              <h2>Replay Step</h2>
+              <div class="replay-toggle" role="group" aria-label="Replay snapshot side">
+                <button id="replayBeforeBtn" type="button">Before</button>
+                <button id="replayAfterBtn" type="button">After</button>
+              </div>
+            </div>
+            <pre id="replayDiff" class="debug-text"></pre>
+            <div id="replaySnapshot" class="snapshot-grid"></div>
+          </section>
+
+          <form id="commandForm" class="command-form">
+            <input
+              id="commandInput"
+              name="command"
+              type="text"
+              autocomplete="off"
+              placeholder="play OP12-021"
+              aria-label="Command"
+            >
+            <button type="submit">Send</button>
+          </form>
+          <div id="statusLine" class="status-line">Ready</div>
+        </aside>
+      </main>
+
+      <section class="details-grid">
+        <article class="details-panel">
+          <h2>Selected Card</h2>
+          <div id="cardDetails" class="details-body">Select a visible card.</div>
+        </article>
+        <article class="details-panel">
+          <h2>Latest Diff</h2>
+          <pre id="latestDiff" class="debug-text"></pre>
+        </article>
+        <article class="details-panel">
+          <h2>AI Debug</h2>
+          <pre id="aiDebug" class="debug-text"></pre>
+        </article>
+      </section>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
