@@ -559,6 +559,90 @@ Notes:
 - self-play should be introduced only after the human-reporting path is stable enough to trust as the main product loop
 
 
+Phase I: Heuristic Planning Agent
+Status: Future / Recommended Next AI Direction
+
+Core direction:
+- add a deterministic HeuristicPlanningAgent as a separate game-AI policy
+- this agent should not use an LLM API as its core move selector
+- the heuristic agent should receive engine state plus engine-generated legal actions, score those legal actions, and choose only from that list
+- the rules engine/referee remain authoritative for legal action generation and state mutation
+- an LLM can remain optional for explanation, coaching, post-game review, or developer assistance, but should not be required for normal AI turn execution
+
+Reasoning:
+- LLMs are useful for language, summaries, and strategic explanations, but they are slow, inconsistent, and expensive for exact game-tree decisions
+- a purpose-built heuristic/search policy is easier to debug, cheaper to run locally, and better aligned with strict legal-action execution
+- a custom trained transformer is premature until the project has a large dataset of states, legal actions, chosen actions, and outcomes from real or self-play games
+- the right near-term path is deterministic heuristics first, then search/self-play data, then possibly a learned policy or value model later
+
+Proposed implementation shape:
+- introduce a common planning interface:
+  - get_next_action(state, legal_actions) -> action index
+  - get_turn_plan(state, legal_actions) -> list of action indices, mostly for compatibility
+- keep FakePlanningAgent for smoke tests and deterministic low-quality behavior
+- add HeuristicPlanningAgent for normal local AI play
+- later add optional policy variants:
+  - fake
+  - heuristic
+  - search
+  - llm-assisted
+  - learned
+
+Important execution change:
+- prefer one-action-at-a-time planning for the heuristic agent
+- after each action is applied, regenerate legal actions and score again
+- this avoids stale action-index plans after board, DON, hand, or battle state changes
+- the web cockpit AI loop should eventually ask the planning agent for the next action repeatedly until it chooses end_turn, hits a prompt, wins/loses, or reaches a safety action cap
+
+Scoring output:
+- every candidate action should receive:
+  - score
+  - reasons
+  - risk flags if useful
+- the chosen action and top alternatives should be recorded in AI debug history
+- the cockpit should show the score breakdown so the user can understand why the AI acted
+
+First-pass scoring categories:
+- play_card:
+  - reward developing board
+  - reward efficient DON usage
+  - reward strong power/cost bodies
+  - reward blockers or defensive pieces when behind
+  - penalize low-impact plays that consume DON needed for stronger attacks
+- attach_don:
+  - reward reaching useful attack thresholds
+  - reward pushing leader damage
+  - penalize attaching to summoning-sick cards unless the attachment has another purpose
+  - penalize overcommitting all DON to one low-value body
+- attack:
+  - reward legal leader attacks, especially with the leader because board risk is low
+  - reward attacks that KO rested characters cleanly
+  - reward pressure at 6000/7000/9000+ thresholds
+  - penalize attacks into obvious unfavorable counter ranges
+  - penalize attacking with important blockers or value pieces when the payoff is weak
+- end_turn:
+  - heavily penalize while good plays or attacks remain
+  - choose when no positive-score action remains
+
+First milestone:
+- HeuristicPlanningAgent can:
+  - play a reasonable legal card
+  - attach DON to a sensible attacker
+  - attack with leader when legal
+  - attack profitable rested characters
+  - attack leader with remaining attackers when positive
+  - end turn when no useful actions remain
+  - expose score/reason debug output in the cockpit
+
+Safety rails:
+- never choose actions outside get_legal_actions
+- never resolve unsupported card text by heuristic or LLM guess
+- never continue planning through a pending web prompt
+- cap actions per AI turn
+- log every decision and score breakdown
+- keep deterministic behavior by default so bugs are reproducible
+
+
 5. Priority Order From Here
 
 Recommended next implementation order:

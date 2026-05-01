@@ -101,6 +101,27 @@ class OpponentIntakeTests(unittest.TestCase):
 
         self.assertIn("attack", planned_actions)
 
+    def test_fake_planning_agent_keeps_leader_attack_in_short_plan(self) -> None:
+        legal_actions = [
+            {"type": "play_card", "payload": {"card_id": "P1-CARD-001"}},
+            {"type": "attach_don", "payload": {"card_id": "P1-CARD-001", "amount": 1}},
+            {"type": "attack", "payload": {"attacker_id": "P1-CARD-001", "target": "leader"}},
+            {"type": "attack", "payload": {"attacker_id": "P1-CARD-002", "target": "leader"}},
+            {"type": "attack", "payload": {"attacker_id": "P1-CARD-003", "target": "leader"}},
+            {"type": "attack", "payload": {"attacker_id": "P1-CARD-004", "target": "leader"}},
+            {"type": "attack", "payload": {"attacker_id": "P1-LEADER", "target": "leader"}},
+            {"type": "end_turn", "payload": {}},
+        ]
+        state = self.engine.create_initial_state(seed=7)
+
+        plan = cli_game.FakePlanningAgent().get_turn_plan(state, legal_actions)
+        planned_actions = [legal_actions[index] for index in plan]
+
+        self.assertIn(
+            {"type": "attack", "payload": {"attacker_id": "P1-LEADER", "target": "leader"}},
+            planned_actions,
+        )
+
     def test_fake_planning_agent_plays_card_before_spending_don_on_attacks(self) -> None:
         legal_actions = [
             {"type": "play_card", "payload": {"card_id": "P1-CARD-001"}},

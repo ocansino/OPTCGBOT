@@ -168,7 +168,7 @@ button:disabled {
 
 .zone-title {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 6px;
@@ -176,6 +176,21 @@ button:disabled {
   font-weight: 700;
   text-transform: uppercase;
   color: #34495a;
+}
+
+.zone-meta,
+.power-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.power-controls button {
+  min-height: 24px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .card-row {
@@ -205,10 +220,13 @@ button:disabled {
   flex-direction: column;
   justify-content: space-between;
   gap: 6px;
+  cursor: pointer;
 }
 
-.card-tile:hover {
+.card-tile:hover,
+.card-tile:focus-visible {
   border-color: var(--accent);
+  outline: none;
 }
 
 .card-title {
@@ -250,6 +268,16 @@ button:disabled {
 .stat-chip.good {
   background: #e5f3eb;
   color: var(--good);
+}
+
+.stat-chip.state-toggle {
+  cursor: pointer;
+}
+
+.stat-chip.state-toggle:hover,
+.stat-chip.state-toggle:focus-visible {
+  outline: 2px solid rgba(47, 112, 165, 0.24);
+  outline-offset: 1px;
 }
 
 .pile-tile {

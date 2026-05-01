@@ -15,6 +15,7 @@ from cli_intake import (
     print_opponent_intake_log as intake_print_opponent_intake_log,
     run_logged_human_action as intake_run_logged_human_action,
 )
+from ai.planning import HeuristicPlanningAgent
 from glat_engine import GLATEngine, InvalidActionError
 from referee import get_legal_actions
 
@@ -98,7 +99,7 @@ class FakePlanningAgent:
 
         chosen.sort(
             key=lambda item: (
-                item[1]["payload"]["attacker_id"].endswith("LEADER"),
+                not item[1]["payload"]["attacker_id"].endswith("LEADER"),
                 item[1]["payload"]["attacker_id"],
             )
         )
@@ -138,6 +139,16 @@ class FakePlanningAgent:
         if not plan:
             return [end_index]
         return plan[:5] + [end_index]
+
+
+def build_local_planning_agent(ai_mode: str, use_fake_ai: bool = False) -> Optional[Any]:
+    if use_fake_ai:
+        return FakePlanningAgent()
+    if ai_mode == "fake":
+        return FakePlanningAgent()
+    if ai_mode == "heuristic":
+        return HeuristicPlanningAgent()
+    return None
 
 
 def card_label(card: Dict[str, Any]) -> str:
@@ -1741,10 +1752,16 @@ def main() -> None:
     parser.add_argument("--state-out", default="cli_game_state.json")
     parser.add_argument("--load-state", default=None, help="Resume from an existing saved game state JSON")
     parser.add_argument("--fake-ai", action="store_true", help="Use deterministic fake AI instead of Gemini")
+    parser.add_argument(
+        "--ai",
+        choices=["gemini", "fake", "heuristic"],
+        default="gemini",
+        help="AI policy to use for P1 turns",
+    )
     parser.add_argument("--demo-turns", type=int, default=0, help="Run N non-interactive smoke-test turns")
     args = parser.parse_args()
 
-    agent = FakePlanningAgent() if args.fake_ai else None
+    agent = build_local_planning_agent(args.ai, use_fake_ai=args.fake_ai)
     engine = GLATEngine(
         agent=agent,
         effect_choice_provider=cli_effect_choice,

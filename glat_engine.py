@@ -70,7 +70,12 @@ class GLATEngine:
     def lookup_card_data(self, card_id: str) -> Optional[Dict[str, Any]]:
         if not card_id:
             return None
-        return self.full_catalog.get(card_id.upper())
+        normalized_id = card_id.upper()
+        card = self.full_catalog.get(normalized_id)
+        if card is None:
+            self.full_catalog = self._build_full_catalog()
+            card = self.full_catalog.get(normalized_id)
+        return card
 
     def _card_types(self, card_or_id: Any) -> List[str]:
         if isinstance(card_or_id, str):
@@ -95,7 +100,7 @@ class GLATEngine:
         if card_id == "OP12-089":
             return self._leader_has_type(player, "Revolutionary Army")
         if card_id == "OP12-087":
-            return player["leader"]["card_id"] in {"OP12-081"}
+            return player["leader"]["card_id"] in {"OP12-081"} or player["leader"].get("name") in {"Koala", "Monkey.D.Luffy"}
         if card_id == "OP12-021":
             card_data = self.lookup_card_data(card_id) or {}
             return "[Blocker]" in (card_data.get("effect") or "")
@@ -143,6 +148,7 @@ class GLATEngine:
             "state": "active",
             "played_turn": None,
             "battle_power_bonus": 0,
+            "manual_power_bonus": 0,
             "temporary_cost_bonus": 0,
             "temporary_cost_bonus_expires": None,
         }
@@ -166,6 +172,8 @@ class GLATEngine:
             "name": leader_card.get("name", ""),
             "power": leader_card.get("power") or 5000,
             "state": "active",
+            "battle_power_bonus": 0,
+            "manual_power_bonus": 0,
         }
         life = self._leader_life(leader_card)
         hand = [deck.pop(0) for _ in range(5)]
@@ -280,9 +288,11 @@ class GLATEngine:
                 for card in player.get(zone, []):
                     card.setdefault("base_cost", card.get("cost", 0) or 0)
                     card.setdefault("battle_power_bonus", 0)
+                    card.setdefault("manual_power_bonus", 0)
                     card.setdefault("temporary_cost_bonus", 0)
                     card.setdefault("temporary_cost_bonus_expires", None)
             player["leader"].setdefault("battle_power_bonus", 0)
+            player["leader"].setdefault("manual_power_bonus", 0)
 
         return state
 
@@ -388,7 +398,12 @@ class GLATEngine:
         )
         if state["active_player"] == player_id:
             attached = player["attached_don"].get(card["instance_id"], 0)
-        return (card.get("power") or 0) + (attached * 1000) + (card.get("battle_power_bonus") or 0)
+        return (
+            (card.get("power") or 0)
+            + (attached * 1000)
+            + (card.get("battle_power_bonus") or 0)
+            + (card.get("manual_power_bonus") or 0)
+        )
 
     def _replay_card_snapshot(
         self,
@@ -919,12 +934,16 @@ class GLATEngine:
     ) -> Optional[str]:
         if not blocker_options:
             return None
-        current_target_power = self._current_power(state, defender, current_target_card)
-        if attacker_power < current_target_power:
-            return None
         if target != "leader":
             return None
-        blocker = self._choose_lowest_value_cards(blocker_options, 1)[0]
+        surviving_blockers = [
+            blocker
+            for blocker in blocker_options
+            if attacker_power < self._current_power(state, defender, blocker)
+        ]
+        if not surviving_blockers:
+            return None
+        blocker = self._choose_lowest_value_cards(surviving_blockers, 1)[0]
         return blocker["instance_id"]
 
     def _choose_counters_default(
@@ -1796,6 +1815,55 @@ class GLATEngine:
             {
                 "type": "manual_set_card_state",
                 "payload": {"card_id": instance_id, "state": new_state},
+            },
+            result,
+            before_snapshot=before_snapshot,
+        )
+        self.validate_state(state)
+        return result
+
+    def manual_adjust_power(
+        self,
+        state: Dict[str, Any],
+        player_id: str,
+        target: str,
+        amount: int,
+    ) -> Dict[str, Any]:
+        if amount == 0:
+            raise ValueError("amount must not be 0")
+        player = state["players"][player_id]
+        if target == "leader":
+            cards = [player["leader"]]
+        elif target == "board":
+            cards = list(player["board"])
+        else:
+            raise ValueError("target must be 'leader' or 'board'")
+        before_snapshot = self._snapshot_state_for_replay(state)
+        changed_cards = []
+        for card in cards:
+            before_bonus = card.get("manual_power_bonus", 0) or 0
+            card["manual_power_bonus"] = before_bonus + amount
+            changed_cards.append(
+                {
+                    "card_id": card["card_id"],
+                    "instance_id": card["instance_id"],
+                    "from": before_bonus,
+                    "to": card["manual_power_bonus"],
+                    "power": self._current_power(state, player, card),
+                }
+            )
+        result = {
+            "player": player_id,
+            "target": target,
+            "amount": amount,
+            "cards": changed_cards,
+        }
+        self.log_action(
+            state,
+            player_id,
+            {
+                "type": "manual_adjust_power",
+                "payload": {"target": target, "amount": amount},
             },
             result,
             before_snapshot=before_snapshot,

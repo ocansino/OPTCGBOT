@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib.parse import parse_qs, urlparse
 
-from cli_game import FakePlanningAgent, action_label
+from cli_game import action_label, build_local_planning_agent
 from glat_engine import GLATEngine
 from operator_gui import (
     AI_PLAYER,
@@ -34,7 +34,8 @@ from referee import get_legal_actions
 DEFAULT_STATE_PATH = "web_game_state.json"
 
 
-def _card_view(card: Dict[str, Any], hidden: bool = False) -> Dict[str, Any]:
+def _card_view(card: Optional[Dict[str, Any]], hidden: bool = False) -> Dict[str, Any]:
+    card = card or {}
     if hidden:
         return {
             "hidden": True,
@@ -55,6 +56,7 @@ def _card_view(card: Dict[str, Any], hidden: bool = False) -> Dict[str, Any]:
         "state": card.get("state"),
         "played_turn": card.get("played_turn"),
         "battle_power_bonus": card.get("battle_power_bonus", 0),
+        "manual_power_bonus": card.get("manual_power_bonus", 0),
         "temporary_cost_bonus": card.get("temporary_cost_bonus", 0),
     }
 
@@ -101,15 +103,29 @@ def _player_view(state: Dict[str, Any], player_id: str) -> Dict[str, Any]:
     hide_hand = player_id == AI_PLAYER
     attached_don = player.get("attached_don", {})
     visible_life_cards = []
+    leader = player.get("leader", {})
+
+    def current_power(card: Dict[str, Any]) -> int:
+        attached = attached_don.get(card.get("instance_id"), 0) if state.get("active_player") == player_id else 0
+        return (
+            (card.get("power") or 0)
+            + (attached * 1000)
+            + (card.get("battle_power_bonus") or 0)
+            + (card.get("manual_power_bonus") or 0)
+        )
 
     return {
         "id": player_id,
         "label": "AI" if player_id == AI_PLAYER else "Human",
         "life": player.get("life", len(player.get("life_cards", []))),
-        "leader": _card_view(player.get("leader", {})),
+        "leader": {
+            **_card_view(leader),
+            "current_power": current_power(leader),
+        },
         "board": [
             {
                 **_card_view(card),
+                "current_power": current_power(card),
                 "attached_don": attached_don.get(card.get("instance_id"), 0),
                 "has_blocker": bool(state.get("_display_blockers", {}).get(card.get("instance_id"), False)),
             }
@@ -199,10 +215,11 @@ class WebMatchSession:
         seed: int = 7,
         match_mode: str = "physical_reported",
         use_fake_ai: bool = False,
+        ai_mode: str = "gemini",
         auto_load: bool = True,
     ) -> None:
         self.state_path = Path(state_path)
-        agent = FakePlanningAgent() if use_fake_ai else None
+        agent = build_local_planning_agent(ai_mode, use_fake_ai=use_fake_ai)
         self._active_defense_choice: Optional[Dict[str, Any]] = None
         self.engine = GLATEngine(agent=agent, defense_choice_provider=self._web_defense_choice)
         if auto_load and self.state_path.exists():
@@ -282,7 +299,8 @@ class WebMatchSession:
         return self._response(changed, message)
 
     def submit_choice(self, choice: str) -> Dict[str, Any]:
-        if self.state.get("pending_web_prompt", {}).get("type") == "defense_choice":
+        pending_web_prompt = self.state.get("pending_web_prompt") or {}
+        if pending_web_prompt.get("type") == "defense_choice":
             return self.submit_defense_choice(choice)
         return self.submit_command(choice)
 
@@ -390,11 +408,22 @@ class WebMatchSession:
         planned_indices = self.engine.agent.get_turn_plan(self.state, legal_actions)
         if not isinstance(planned_indices, list) or not planned_indices:
             planned_indices = [len(legal_actions) - 1]
+        scored_actions = getattr(self.engine.agent, "last_scored_actions", [])
         ai_debug_entry = {
             "turn": self.state["turn"],
             "player": self.state["active_player"],
             "phase": self.state["phase"],
             "legal_actions": [copy.deepcopy(action) for action in legal_actions],
+            "scored_actions": [
+                {
+                    "index": item.index,
+                    "action": copy.deepcopy(item.action),
+                    "score": item.score,
+                    "reasons": list(item.reasons),
+                    "risk_flags": list(item.risk_flags),
+                }
+                for item in scored_actions
+            ],
             "planned_indices": list(planned_indices),
             "planned_actions": [
                 copy.deepcopy(legal_actions[index])
@@ -639,12 +668,14 @@ def create_server(
     seed: int = 7,
     match_mode: str = "physical_reported",
     use_fake_ai: bool = False,
+    ai_mode: str = "gemini",
 ) -> ThreadingHTTPServer:
     session = WebMatchSession(
         state_path=state_path,
         seed=seed,
         match_mode=match_mode,
         use_fake_ai=use_fake_ai,
+        ai_mode=ai_mode,
     )
 
     class Handler(CockpitRequestHandler):
@@ -662,6 +693,12 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--match-mode", choices=["digital_strict", "physical_reported"], default="physical_reported")
     parser.add_argument("--fake-ai", action="store_true", help="Use deterministic local AI instead of Gemini.")
+    parser.add_argument(
+        "--ai",
+        choices=["gemini", "fake", "heuristic"],
+        default="gemini",
+        help="AI policy to use for P1 turns.",
+    )
     args = parser.parse_args()
 
     server = create_server(
@@ -671,6 +708,7 @@ def main() -> None:
         seed=args.seed,
         match_mode=args.match_mode,
         use_fake_ai=args.fake_ai,
+        ai_mode=args.ai,
     )
     print(f"GLAT web cockpit listening at http://{args.host}:{args.port}")
     try:

@@ -99,6 +99,21 @@ class OperatorGuiHelperTests(unittest.TestCase):
         self.assertEqual(state["players"][HUMAN_PLAYER]["board"][-1]["card_id"], "OP12-021")
         self.assertEqual(state["replay_log"][-1]["action"]["type"], "physical_reported_play")
 
+    def test_physical_reported_play_can_enter_rested(self) -> None:
+        state = self.engine.create_initial_state(seed=7, match_mode="physical_reported")
+        state["turn"] = 3
+        state["active_player"] = HUMAN_PLAYER
+        state["phase"] = "main"
+        state["players"][HUMAN_PLAYER]["hand"] = []
+
+        changed, message = process_console_command(self.engine, state, "play rested OP12-021")
+
+        self.assertTrue(changed)
+        self.assertIn("rested", message)
+        self.assertEqual(state["players"][HUMAN_PLAYER]["board"][-1]["card_id"], "OP12-021")
+        self.assertEqual(state["players"][HUMAN_PLAYER]["board"][-1]["state"], "rested")
+        self.assertEqual(state["replay_log"][-1]["result"]["state"], "rested")
+
     def test_digital_strict_does_not_create_untracked_physical_play(self) -> None:
         state = self.engine.create_initial_state(seed=7)
         state["turn"] = 3

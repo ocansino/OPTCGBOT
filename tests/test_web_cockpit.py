@@ -45,11 +45,45 @@ class WebCockpitSessionTests(unittest.TestCase):
         self.assertTrue(response["prompt"]["choices"])
         self.assertEqual(response["state"]["players"]["P2"]["board"][-1]["card_id"], "OP12-021")
 
+    def test_manual_state_toggle_command_targets_card_instance(self) -> None:
+        session = self.make_session(match_mode="physical_reported")
+        session.state["turn"] = 3
+        session.state["active_player"] = "P2"
+        session.state["phase"] = "main"
+        card = session.engine.build_card_instance("P2", "OP12-021")
+        card["state"] = "active"
+        session.state["players"]["P2"]["board"].append(card)
+
+        response = session.submit_command(f"set {card['instance_id']} rested")
+
+        self.assertTrue(response["ok"])
+        self.assertEqual(session.state["players"]["P2"]["board"][0]["state"], "rested")
+        self.assertEqual(response["state"]["players"]["P2"]["board"][0]["state"], "rested")
+        self.assertEqual(session.state["replay_log"][-1]["action"]["type"], "manual_set_card_state")
+
+    def test_manual_power_adjustment_updates_board_cards(self) -> None:
+        session = self.make_session(match_mode="physical_reported")
+        session.state["turn"] = 3
+        session.state["active_player"] = "P2"
+        session.state["phase"] = "main"
+        first = session.engine.build_card_instance("P2", "OP12-021")
+        second = session.engine.build_card_instance("P2", "OP15-113")
+        session.state["players"]["P2"]["board"].extend([first, second])
+
+        response = session.submit_command("power P2 board +1000")
+
+        self.assertTrue(response["ok"])
+        self.assertEqual(first["manual_power_bonus"], 1000)
+        self.assertEqual(second["manual_power_bonus"], 1000)
+        self.assertEqual(response["state"]["players"]["P2"]["board"][0]["current_power"], first["power"] + 1000)
+        self.assertEqual(session.state["replay_log"][-1]["action"]["type"], "manual_adjust_power")
+
     def test_choice_command_clears_pending_prompt(self) -> None:
         session = self.make_session(match_mode="physical_reported")
         session.state["turn"] = 3
         session.state["active_player"] = "P2"
         session.state["phase"] = "main"
+        session.state["pending_web_prompt"] = None
 
         response = session.submit_command("play OP12-021")
         self.assertTrue(response["ok"])

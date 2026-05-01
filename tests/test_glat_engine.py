@@ -1,4 +1,6 @@
+import json
 import random
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -76,6 +78,30 @@ class GLATEngineTests(unittest.TestCase):
     def setUp(self) -> None:
         self.agent = FakeAgent()
         self.engine = SpyEngine(agent=self.agent)
+
+    def test_lookup_card_data_refreshes_full_catalog_after_miss(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cards_root = Path(temp_dir) / "cards_repo"
+            engine = GLATEngine(agent=self.agent, cards_root=str(cards_root))
+
+            card_file = cards_root / "cards" / "custom" / "OP99-999.json"
+            card_file.parent.mkdir(parents=True)
+            card_file.write_text(
+                json.dumps(
+                    {
+                        "id": "OP99-999",
+                        "name": "Late Catalog Card",
+                        "category": "Character",
+                        "cost": 1,
+                        "power": 1000,
+                        "counter": 1000,
+                        "types": ["Test"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(engine.lookup_card_data("OP99-999")["name"], "Late Catalog Card")
 
     def test_initial_setup_deals_opening_hand_before_life(self) -> None:
         state = self.engine.create_initial_state(seed=7)
@@ -1024,6 +1050,85 @@ class GLATEngineTests(unittest.TestCase):
         self.assertTrue(any(event["stage"] == "cleanup" for event in result["battle_context"]["events"]))
         blocker_event = next(event for event in result["battle_context"]["events"] if event["stage"] == "blocker_window")
         self.assertEqual(blocker_event["chosen_blocker"], blocker["instance_id"])
+
+    def test_default_defense_blocks_with_op12_089_when_blocker_survives(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+
+        attacker_player = state["players"]["P1"]
+        defender_player = state["players"]["P2"]
+        attacker = self.engine.build_card_instance("P1", "OP12-086")
+        attacker["played_turn"] = 2
+        blocker = self.engine.build_card_instance("P2", "OP12-089")
+        blocker["played_turn"] = 2
+        attacker_player["board"] = [attacker]
+        defender_player["board"] = [blocker]
+        defender_player["hand"] = []
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "attack", "payload": {"attacker_id": attacker["instance_id"], "target": "leader"}},
+        )
+
+        self.assertEqual(result["final_target"], blocker["instance_id"])
+        self.assertEqual(result["defense"]["blocker_id"], blocker["instance_id"])
+        self.assertEqual(blocker["state"], "rested")
+        self.assertIn(blocker, defender_player["board"])
+        self.assertEqual(defender_player["life"], 4)
+
+    def test_default_defense_blocks_with_op12_087_when_blocker_survives(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+
+        attacker_player = state["players"]["P1"]
+        defender_player = state["players"]["P2"]
+        attacker = self.engine.build_card_instance("P1", "EB03-042")
+        attacker["played_turn"] = 2
+        blocker = self.engine.build_card_instance("P2", "OP12-087")
+        blocker["played_turn"] = 2
+        attacker_player["board"] = [attacker]
+        defender_player["board"] = [blocker]
+        defender_player["hand"] = []
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "attack", "payload": {"attacker_id": attacker["instance_id"], "target": "leader"}},
+        )
+
+        self.assertEqual(result["final_target"], blocker["instance_id"])
+        self.assertEqual(result["defense"]["blocker_id"], blocker["instance_id"])
+        self.assertEqual(blocker["state"], "rested")
+        self.assertIn(blocker, defender_player["board"])
+        self.assertEqual(defender_player["life"], 4)
+
+    def test_default_defense_does_not_block_when_blocker_would_not_survive(self) -> None:
+        state = self.engine.create_initial_state(seed=7)
+        state["turn"] = 3
+        state["active_player"] = "P1"
+        state["phase"] = "main"
+
+        attacker_player = state["players"]["P1"]
+        defender_player = state["players"]["P2"]
+        attacker = self.engine.build_card_instance("P1", "EB03-042")
+        attacker["played_turn"] = 2
+        blocker = self.engine.build_card_instance("P2", "OP12-089")
+        blocker["played_turn"] = 2
+        attacker_player["board"] = [attacker]
+        defender_player["board"] = [blocker]
+        defender_player["hand"] = []
+
+        result = self.engine.apply_action(
+            state,
+            {"type": "attack", "payload": {"attacker_id": attacker["instance_id"], "target": "leader"}},
+        )
+
+        self.assertEqual(result["final_target"], "leader")
+        self.assertIsNone(result["defense"]["blocker_id"])
+        self.assertEqual(blocker["state"], "active")
 
     def test_default_counter_can_prevent_leader_damage(self) -> None:
         state = self.engine.create_initial_state(seed=7)

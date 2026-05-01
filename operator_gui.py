@@ -6,9 +6,9 @@ from tkinter import filedialog, messagebox, ttk
 from typing import Any, Dict, List, Optional, Tuple
 
 from cli_game import (
-    FakePlanningAgent,
     action_label,
     begin_opponent_intake_session,
+    build_local_planning_agent,
     card_label,
     format_battle_context_lines,
     finish_opponent_intake_session,
@@ -142,14 +142,20 @@ def format_console_lines(state: Dict[str, Any], count: int = 24) -> List[str]:
 
 
 def _extract_physical_play_card_id(command: str) -> Optional[str]:
+    report = _extract_physical_play_report(command)
+    return report["card_id"] if report is not None else None
+
+
+def _extract_physical_play_report(command: str) -> Optional[Dict[str, str]]:
     match = re.match(
-        r"^(?:i\s+)?(?:play|played)\s+([A-Za-z]{2,4}\d{2}-\d{3})\s*$",
+        r"^(?:i\s+)?(?:play|played)\s+(?:(rested)\s+)?([A-Za-z]{2,4}\d{2}-\d{3})(?:\s+(rested))?\s*$",
         command.strip(),
         flags=re.IGNORECASE,
     )
     if match is None:
         return None
-    return match.group(1).upper()
+    initial_state = "rested" if match.group(1) or match.group(3) else "active"
+    return {"card_id": match.group(2).upper(), "state": initial_state}
 
 
 def _card_has_unresolved_text(card_data: Dict[str, Any]) -> bool:
@@ -258,9 +264,12 @@ def apply_physical_reported_play(
     engine: GLATEngine,
     state: Dict[str, Any],
     card_id: str,
+    initial_state: str = "active",
 ) -> Tuple[bool, str]:
     if state.get("match_mode") != "physical_reported":
         return False, "Physical reported plays are only available in physical_reported mode."
+    if initial_state not in {"active", "rested"}:
+        return False, "Physical reported plays can only start active or rested."
 
     card_data = engine.lookup_card_data(card_id)
     if card_data is None:
@@ -275,7 +284,7 @@ def apply_physical_reported_play(
     before_snapshot = engine._snapshot_state_for_replay(state)
     card = engine.build_card_instance(HUMAN_PLAYER, card_id)
     card["played_turn"] = state.get("turn")
-    card["state"] = "active"
+    card["state"] = initial_state
 
     destination = "board" if card.get("category") == "Character" else "trash"
     if destination == "board":
@@ -291,6 +300,7 @@ def apply_physical_reported_play(
         "reported_play": card["card_id"],
         "destination": destination,
         "mode": "physical_reported",
+        "state": card.get("state"),
         "cost_handled_by": "physical_table",
         "effect_status": "unsupported_manual_required" if unsupported_effect else "no_auto_prompt",
     }
@@ -311,7 +321,7 @@ def apply_physical_reported_play(
         result,
         before_snapshot=before_snapshot,
     )
-    message = f"Recorded physical play: {card['card_id']} to {destination}."
+    message = f"Recorded physical play: {card['card_id']} to {destination} {card.get('state', 'active')}."
     if unsupported_effect:
         message = f"{message} {_unsupported_effect_message(card['card_id'])}"
     return True, message
@@ -370,6 +380,12 @@ def collect_ai_debug_lines(state: Dict[str, Any], count: int = 2) -> List[str]:
             f"Turn {entry['turn']} {entry['player']} | legal {len(entry.get('legal_actions', []))} | "
             f"planned {entry.get('planned_indices', [])} | fallback_end_turn={entry.get('fallback_end_turn', False)}"
         )
+        for scored in entry.get("scored_actions", [])[:3]:
+            action = scored.get("action", {})
+            lines.append(
+                f"  score {scored.get('score', '-')}: {action.get('type', '-')} "
+                f"#{scored.get('index', '-')}"
+            )
         for executed in entry.get("executed_actions", []):
             action = executed.get("action", {})
             lines.append(f"  {executed.get('status', 'unknown')}: {action.get('type', '-')}")
@@ -587,6 +603,21 @@ def _normalize_zone(value: str) -> str:
         "discard": "trash",
     }
     return aliases.get(normalized, normalized)
+
+
+def _parse_power_delta(value: str) -> Optional[int]:
+    normalized = value.strip().lower()
+    match = re.fullmatch(r"([+-])\s*(\d+)", normalized)
+    if match:
+        amount = int(match.group(2))
+        return amount if match.group(1) == "+" else -amount
+    match = re.fullmatch(r"(?:add|plus)\s+(\d+)", normalized)
+    if match:
+        return int(match.group(1))
+    match = re.fullmatch(r"(?:remove|minus)\s+(\d+)", normalized)
+    if match:
+        return -int(match.group(1))
+    return None
 
 
 def _card_ref_matches(card: Dict[str, Any], reference: str) -> bool:
@@ -823,6 +854,25 @@ def process_correction_command(
             return False, "Life correction needs a whole number."
         return _correct_life_total(engine, state, player_id, target_life, raw)
 
+    if verb in {"power", "pow"} and len(parts) == 4:
+        player_id = _normalize_player_id(parts[1])
+        if player_id is None:
+            return False, "Use P1/AI or P2/Human for power adjustment."
+        target_token = parts[2].lower()
+        if target_token in {"leader", "lead"}:
+            target = "leader"
+        elif _normalize_zone(target_token) == "board":
+            target = "board"
+        else:
+            return False, "Power target must be leader or board."
+        amount = _parse_power_delta(parts[3])
+        if amount is None:
+            return False, "Power adjustment needs +1000 or -1000."
+        result = engine.manual_adjust_power(state, player_id, target, amount)
+        _record_correction(state, raw, result)
+        sign = "+" if amount > 0 else ""
+        return True, f"Correction recorded: {player_id} {target} power {sign}{amount}."
+
     if verb == "remove" and len(parts) in (2, 3, 4):
         player_id = None
         zone = None
@@ -924,9 +974,14 @@ def process_operator_command(
     if pending_result is not None:
         return pending_result
 
-    physical_play_card_id = _extract_physical_play_card_id(raw)
-    if physical_play_card_id is not None and state.get("match_mode") == "physical_reported":
-        return apply_physical_reported_play(engine, state, physical_play_card_id)
+    physical_play_report = _extract_physical_play_report(raw)
+    if physical_play_report is not None and state.get("match_mode") == "physical_reported":
+        return apply_physical_reported_play(
+            engine,
+            state,
+            physical_play_report["card_id"],
+            physical_play_report["state"],
+        )
 
     correction_result = process_correction_command(engine, state, raw)
     if correction_result is not None:
@@ -945,8 +1000,13 @@ def process_operator_command(
             finish_opponent_intake_session(state, "completed")
         return True, f"Applied action: {action_label(action)}"
 
-    if physical_play_card_id is not None:
-        return apply_physical_reported_play(engine, state, physical_play_card_id)
+    if physical_play_report is not None:
+        return apply_physical_reported_play(
+            engine,
+            state,
+            physical_play_report["card_id"],
+            physical_play_report["state"],
+        )
 
     return False, f"Could not apply command: {raw}"
 
@@ -979,6 +1039,7 @@ class OperatorGUI(tk.Tk):
         self,
         state_path: str,
         use_fake_ai: bool = False,
+        ai_mode: str = "gemini",
         seed: int = 7,
         match_mode: str = "digital_strict",
     ) -> None:
@@ -988,7 +1049,7 @@ class OperatorGUI(tk.Tk):
         self.minsize(1240, 780)
 
         self.state_path = Path(state_path)
-        agent = FakePlanningAgent() if use_fake_ai else None
+        agent = build_local_planning_agent(ai_mode, use_fake_ai=use_fake_ai)
         self.engine = GLATEngine(
             agent=agent,
             effect_choice_provider=self.gui_effect_choice,
@@ -1840,6 +1901,12 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--fake-ai", action="store_true", help="Use deterministic fake AI instead of Gemini")
     parser.add_argument(
+        "--ai",
+        choices=["gemini", "fake", "heuristic"],
+        default="gemini",
+        help="AI policy to use for P1 turns",
+    )
+    parser.add_argument(
         "--match-mode",
         choices=["digital_strict", "physical_reported"],
         default="digital_strict",
@@ -1850,6 +1917,7 @@ def main() -> None:
     app = OperatorGUI(
         state_path=args.state_out,
         use_fake_ai=args.fake_ai,
+        ai_mode=args.ai,
         seed=args.seed,
         match_mode=args.match_mode,
     )

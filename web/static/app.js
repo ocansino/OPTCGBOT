@@ -101,11 +101,51 @@ function makeChip(text, extraClass = "") {
   return span;
 }
 
+function displayPower(card) {
+  return card.current_power ?? card.power;
+}
+
+function powerBonusText(card) {
+  const bonus = (card.manual_power_bonus || 0) + (card.battle_power_bonus || 0);
+  if (!bonus) return "";
+  return bonus > 0 ? `+${bonus}` : String(bonus);
+}
+
+function canToggleCardState(card) {
+  return card && card.instance_id && (card.state === "active" || card.state === "rested");
+}
+
+function makeStateChip(card) {
+  const nextState = card.state === "rested" ? "active" : "rested";
+  const chip = makeChip(card.state, card.state === "rested" ? "warn state-toggle" : "state-toggle");
+  chip.title = `Set ${cardLabel(card)} ${nextState}`;
+  chip.setAttribute("role", "button");
+  chip.setAttribute("tabindex", "0");
+  chip.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleCardState(card);
+  });
+  chip.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleCardState(card);
+  });
+  return chip;
+}
+
 function renderCard(card, zoneLabel) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "card-tile";
-  button.addEventListener("click", () => {
+  const tile = document.createElement("article");
+  tile.className = "card-tile";
+  tile.setAttribute("role", "button");
+  tile.setAttribute("tabindex", "0");
+  tile.addEventListener("click", () => {
+    state.selectedCard = { ...card, zoneLabel };
+    renderSelectedCard();
+  });
+  tile.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
     state.selectedCard = { ...card, zoneLabel };
     renderSelectedCard();
   });
@@ -122,14 +162,19 @@ function renderCard(card, zoneLabel) {
   stats.className = "card-stats";
   if (card.category) stats.appendChild(makeChip(card.category));
   if (card.cost !== null && card.cost !== undefined) stats.appendChild(makeChip(`Cost ${card.cost}`));
-  if (card.power !== null && card.power !== undefined) stats.appendChild(makeChip(`Power ${card.power}`));
+  if (card.power !== null && card.power !== undefined) {
+    const bonus = powerBonusText(card);
+    stats.appendChild(makeChip(`Power ${displayPower(card)}${bonus ? ` (${bonus})` : ""}`, bonus ? "good" : ""));
+  }
   if (card.counter) stats.appendChild(makeChip(`+${card.counter}`, "good"));
-  if (card.state) stats.appendChild(makeChip(card.state, card.state === "rested" ? "warn" : ""));
+  if (card.state) {
+    stats.appendChild(canToggleCardState(card) ? makeStateChip(card) : makeChip(card.state, card.state === "rested" ? "warn" : ""));
+  }
   if (card.attached_don) stats.appendChild(makeChip(`DON ${card.attached_don}`, "good"));
   if (card.has_blocker) stats.appendChild(makeChip("Blocker", "warn"));
 
-  button.append(title, name, stats);
-  return button;
+  tile.append(title, name, stats);
+  return tile;
 }
 
 function renderCardRow(cards, zoneLabel) {
@@ -146,7 +191,28 @@ function renderCardRow(cards, zoneLabel) {
   return row;
 }
 
-function renderZone(title, summary, children) {
+function makePowerControls(playerId, target) {
+  const controls = document.createElement("div");
+  controls.className = "power-controls";
+  [
+    ["-1000", -1000],
+    ["+1000", 1000],
+  ].forEach(([label, amount]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.title = `${label} power to ${playerId} ${target}`;
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const sign = amount > 0 ? "+" : "";
+      submitCommand(`power ${playerId} ${target} ${sign}${amount}`);
+    });
+    controls.appendChild(button);
+  });
+  return controls;
+}
+
+function renderZone(title, summary, children, actions = null) {
   const zone = document.createElement("div");
   zone.className = "zone";
 
@@ -157,7 +223,11 @@ function renderZone(title, summary, children) {
   const count = document.createElement("span");
   count.className = "zone-summary";
   count.textContent = summary || "";
-  heading.append(name, count);
+  const meta = document.createElement("div");
+  meta.className = "zone-meta";
+  meta.appendChild(count);
+  if (actions) meta.appendChild(actions);
+  heading.append(name, meta);
 
   zone.append(heading, children);
   return zone;
@@ -201,8 +271,8 @@ function renderPlayer(player, match) {
   const zones = document.createElement("div");
   zones.className = "zones";
 
-  zones.appendChild(renderZone("Leader", "", renderCardRow([player.leader], `${player.id} leader`)));
-  zones.appendChild(renderZone("Board", `${player.board.length}/5`, renderCardRow(player.board, `${player.id} board`)));
+  zones.appendChild(renderZone("Leader", "", renderCardRow([player.leader], `${player.id} leader`), makePowerControls(player.id, "leader")));
+  zones.appendChild(renderZone("Board", `${player.board.length}/5`, renderCardRow(player.board, `${player.id} board`), makePowerControls(player.id, "board")));
 
   const piles = document.createElement("div");
   piles.className = "pile-grid";
@@ -296,6 +366,7 @@ function renderPrompt(prompt) {
 }
 
 function renderSelectedCard() {
+  refreshSelectedCardFromState();
   const card = state.selectedCard;
   if (!card) {
     els.cardDetails.textContent = "Select a visible card.";
@@ -307,13 +378,35 @@ function renderSelectedCard() {
     `Zone: ${card.zoneLabel || "-"}`,
     `Category: ${card.category || "-"}`,
     `Cost: ${card.cost ?? "-"}`,
-    `Power: ${card.power ?? "-"}`,
+    `Power: ${displayPower(card) ?? "-"}`,
+    `Power bonus: ${powerBonusText(card) || "0"}`,
     `Counter: ${card.counter ?? "-"}`,
     `State: ${card.state || "-"}`,
     `Attached DON: ${card.attached_don || 0}`,
     `Instance: ${card.instance_id || "-"}`,
   ];
   els.cardDetails.textContent = lines.join("\n");
+}
+
+function visibleCardsWithZones(stateView) {
+  const players = stateView?.players || {};
+  return Object.values(players).flatMap((player) => {
+    if (!player) return [];
+    const cards = [];
+    if (player.leader) cards.push({ ...player.leader, zoneLabel: `${player.id} leader` });
+    (player.board || []).forEach((card) => cards.push({ ...card, zoneLabel: `${player.id} board` }));
+    return cards;
+  });
+}
+
+function refreshSelectedCardFromState() {
+  if (!state.selectedCard?.instance_id || !state.current) return;
+  const currentCard = visibleCardsWithZones(state.current).find(
+    (card) => card.instance_id === state.selectedCard.instance_id
+  );
+  if (currentCard) {
+    state.selectedCard = currentCard;
+  }
 }
 
 function snapshotPlayerCard(player) {
@@ -452,6 +545,12 @@ async function submitCommand(command) {
     setBusy(false);
     els.commandInput.focus();
   }
+}
+
+async function toggleCardState(card) {
+  if (state.busy || !canToggleCardState(card)) return;
+  const nextState = card.state === "rested" ? "active" : "rested";
+  await submitCommand(`set ${card.instance_id} ${nextState}`);
 }
 
 async function submitChoice(choice) {
