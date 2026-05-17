@@ -28,8 +28,11 @@ AI_PLAYER = "P1"
 HUMAN_PLAYER = "P2"
 SUPPORTED_AUTOMATIC_EFFECT_IDS = {
     "EB03-042",
+    "EB03-056",
     "EB03-053",
+    "EB04-058",
     "OP06-115",
+    "OP07-085",
     "OP10-109",
     "OP12-086",
     "OP12-087",
@@ -41,6 +44,8 @@ SUPPORTED_AUTOMATIC_EFFECT_IDS = {
     "OP12-119",
     "OP14-108",
 }
+
+CARD_ID_PATTERN = r"[A-Za-z]{1,5}\d{0,2}-\d{3}(?:_[A-Za-z]\d+)?"
 
 
 def format_summary_lines(state: Dict[str, Any]) -> List[str]:
@@ -67,7 +72,58 @@ def collect_recent_log_lines(state: Dict[str, Any], count: int = 12) -> List[str
     ]
 
 
+def _effect_card_label(state: Dict[str, Any], instance_id: Optional[str]) -> str:
+    if not instance_id:
+        return "-"
+    for player_id, player in state.get("players", {}).items():
+        leader = player.get("leader", {})
+        if leader.get("instance_id") == instance_id:
+            return f"{player_id} {leader.get('card_id', instance_id)} {leader.get('name', '')} ({instance_id})".strip()
+        for zone in ("board", "trash", "hand", "life_cards", "deck"):
+            for card in player.get(zone, []):
+                if card.get("instance_id") == instance_id:
+                    return f"{player_id} {card.get('card_id', instance_id)} {card.get('name', '')} ({instance_id})".strip()
+    return instance_id
+
+
+def summarize_effect_lines(state: Dict[str, Any], effect_result: Optional[Dict[str, Any]]) -> List[str]:
+    if not effect_result:
+        return []
+
+    effect = effect_result.get("effect", "effect")
+    if effect_result.get("skipped"):
+        return [f"Effect {effect}: skipped ({effect_result['skipped']})."]
+
+    lines: List[str] = []
+    if effect_result.get("trashed_for_cost"):
+        lines.append(
+            f"Effect {effect}: trashed {_effect_card_label(state, effect_result.get('trashed_for_cost'))} as cost."
+        )
+    if effect_result.get("revealed_life"):
+        lines.append(f"Effect {effect}: revealed life card {effect_result['revealed_life']}.")
+    if effect_result.get("ko_target"):
+        lines.append(f"Effect {effect}: K.O.'d {_effect_card_label(state, effect_result.get('ko_target'))}.")
+    if effect_result.get("played_from_trash"):
+        lines.append(f"Effect {effect}: played {_effect_card_label(state, effect_result.get('played_from_trash'))} from trash.")
+    if effect_result.get("played_from_hand"):
+        lines.append(f"Effect {effect}: played {_effect_card_label(state, effect_result.get('played_from_hand'))} from hand.")
+    if effect_result.get("added_to_life"):
+        count = len(effect_result.get("added_to_life") or [])
+        lines.append(f"Effect {effect}: added {count} card{'s' if count != 1 else ''} to life.")
+    if effect_result.get("opponent_life_to_hand"):
+        count = len(effect_result.get("opponent_life_to_hand") or [])
+        lines.append(f"Effect {effect}: opponent took {count} life card{'s' if count != 1 else ''} to hand.")
+    if effect_result.get("trashed_life"):
+        count = len(effect_result.get("trashed_life") or [])
+        lines.append(f"Effect {effect}: trashed {count} life card{'s' if count != 1 else ''}.")
+
+    return lines or [f"Effect {effect}: resolved."]
+
+
 def summarize_action_result(result: Dict[str, Any]) -> str:
+    def rules_text(text: str) -> str:
+        return re.sub(r"\s+", " ", str(text).replace("<br>", " ")).strip()
+
     if result.get("ended_turn"):
         return "ended turn"
     if result.get("played"):
@@ -80,20 +136,36 @@ def summarize_action_result(result: Dict[str, Any]) -> str:
             effect = result["effect_result"].get("effect", "effect")
             skipped = result["effect_result"].get("skipped")
             parts.append(f"{effect} skipped: {skipped}" if skipped else f"{effect} resolved")
+        if result.get("effect_text"):
+            parts.append(f"effect: {rules_text(result['effect_text'])}")
+        if result.get("trigger_text"):
+            parts.append(f"trigger: {rules_text(result['trigger_text'])}")
         return ", ".join(parts)
     if result.get("attached_to"):
         return f"attached {result.get('amount', 0)} DON to {result['attached_to']}"
+    if result.get("instance_id") and result.get("to") is not None and isinstance(result.get("to"), bool):
+        return f"set Rush {'on' if result['to'] else 'off'} for {result['instance_id']}"
     if result.get("target"):
         parts = [f"attacked {result['target']}"]
         if result.get("final_target") and result["final_target"] != result["target"]:
             parts.append(f"redirected to {result['final_target']}")
         if result.get("attacker_power") is not None and result.get("defender_power") is not None:
             parts.append(f"{result['attacker_power']} vs {result['defender_power']}")
+        defense = result.get("defense") or {}
+        counters = defense.get("counters") or []
+        if counters:
+            total_bonus = sum(int(counter.get("power_bonus") or 0) for counter in counters)
+            card_ids = ", ".join(counter.get("card_id", "counter") for counter in counters)
+            parts.append(f"countered +{total_bonus} with {card_ids}")
+        if defense.get("blocker_id"):
+            parts.append(f"blocked by {defense['blocker_id']}")
         if result.get("life_after") is not None:
             parts.append(f"life now {result['life_after']}")
+        if result.get("banished_life"):
+            parts.append("banished life to trash")
         if result.get("ko") is not None:
             parts.append("K.O." if result["ko"] else "no K.O.")
-        if result.get("blocked_or_countered"):
+        if result.get("blocked_or_countered") and not counters and not defense.get("blocker_id"):
             parts.append("blocked/countered")
         return ", ".join(parts)
     text = str(result)
@@ -102,6 +174,14 @@ def summarize_action_result(result: Dict[str, Any]) -> str:
 
 def summarize_action_log_entry(log: Dict[str, Any]) -> str:
     return f"{action_label(log['action'])}: {summarize_action_result(log.get('result', {}))}"
+
+
+def summarize_action_log_entry_with_effects(state: Dict[str, Any], log: Dict[str, Any]) -> str:
+    base = summarize_action_log_entry(log)
+    effect_lines = summarize_effect_lines(state, log.get("result", {}).get("effect_result"))
+    if not effect_lines:
+        return base
+    return f"{base} | {' '.join(effect_lines)}"
 
 
 def append_console_entry(
@@ -148,7 +228,7 @@ def _extract_physical_play_card_id(command: str) -> Optional[str]:
 
 def _extract_physical_play_report(command: str) -> Optional[Dict[str, str]]:
     match = re.match(
-        r"^(?:i\s+)?(?:play|played)\s+(?:(rested)\s+)?([A-Za-z]{2,4}\d{2}-\d{3})(?:\s+(rested))?\s*$",
+        rf"^(?:i\s+)?(?:play|played)\s+(?:(rested)\s+)?({CARD_ID_PATTERN})(?:\s+(rested))?\s*$",
         command.strip(),
         flags=re.IGNORECASE,
     )
@@ -160,6 +240,11 @@ def _extract_physical_play_report(command: str) -> Optional[Dict[str, str]]:
 
 def _card_has_unresolved_text(card_data: Dict[str, Any]) -> bool:
     return bool(card_data.get("effect") or card_data.get("trigger"))
+
+
+def _card_text_is_supported_static(card_data: Dict[str, Any]) -> bool:
+    effect = re.sub(r"\s+", " ", str(card_data.get("effect") or "").replace("<br>", " ")).strip()
+    return bool(effect) and effect.startswith("[Banish]") and "[On " not in effect and "[Activate:" not in effect
 
 
 def _unsupported_effect_message(card_id: str) -> str:
@@ -295,15 +380,21 @@ def apply_physical_reported_play(
     unsupported_effect = (
         _card_has_unresolved_text(card_data)
         and card["card_id"] not in SUPPORTED_AUTOMATIC_EFFECT_IDS
+        and not _card_text_is_supported_static(card_data)
     )
     result: Dict[str, Any] = {
         "reported_play": card["card_id"],
+        "played": card["card_id"],
         "destination": destination,
         "mode": "physical_reported",
         "state": card.get("state"),
         "cost_handled_by": "physical_table",
         "effect_status": "unsupported_manual_required" if unsupported_effect else "no_auto_prompt",
     }
+    if card_data.get("effect"):
+        result["effect_text"] = card_data["effect"]
+    if card_data.get("trigger"):
+        result["trigger_text"] = card_data["trigger"]
     if unsupported_effect:
         result["manual_effect_options"] = ["skip", "manual done", "note <text>", "implement later"]
         state["pending_console_prompt"] = {
@@ -321,7 +412,7 @@ def apply_physical_reported_play(
         result,
         before_snapshot=before_snapshot,
     )
-    message = f"Recorded physical play: {card['card_id']} to {destination} {card.get('state', 'active')}."
+    message = summarize_action_result(result).replace("played", "Recorded physical play:", 1)
     if unsupported_effect:
         message = f"{message} {_unsupported_effect_message(card['card_id'])}"
     return True, message
@@ -378,13 +469,22 @@ def collect_ai_debug_lines(state: Dict[str, Any], count: int = 2) -> List[str]:
     for entry in entries:
         lines.append(
             f"Turn {entry['turn']} {entry['player']} | legal {len(entry.get('legal_actions', []))} | "
-            f"planned {entry.get('planned_indices', [])} | fallback_end_turn={entry.get('fallback_end_turn', False)}"
+            f"planned {entry.get('planned_indices', [])} | mode={entry.get('planning_mode', 'unknown')} | "
+            f"fallback_end_turn={entry.get('fallback_end_turn', False)}"
         )
+        if entry.get("decision_steps"):
+            lines.append(f"  decision steps: {len(entry.get('decision_steps', []))}")
         for scored in entry.get("scored_actions", [])[:3]:
             action = scored.get("action", {})
+            summary = scored.get("summary") or action.get("type", "-")
+            reason = ""
+            if scored.get("reasons"):
+                reason = f" | {scored['reasons'][0]}"
+            if scored.get("lookahead_score"):
+                reason = f"{reason} | lookahead +{scored['lookahead_score']}"
             lines.append(
-                f"  score {scored.get('score', '-')}: {action.get('type', '-')} "
-                f"#{scored.get('index', '-')}"
+                f"  score {scored.get('score', '-')}: {summary} "
+                f"#{scored.get('index', '-')}{reason}"
             )
         for executed in entry.get("executed_actions", []):
             action = executed.get("action", {})
@@ -409,12 +509,20 @@ def collect_intake_log_lines(state: Dict[str, Any]) -> List[str]:
 
 
 def collect_battle_trace_lines(state: Dict[str, Any]) -> List[str]:
+    logs = state.get("logs", [])
+    if logs:
+        result = logs[-1].get("result", {})
+        effect_lines = summarize_effect_lines(state, result.get("effect_result"))
+        if effect_lines:
+            action = logs[-1].get("action", {})
+            header = f"Action: {action_label(action)}"
+            return [header, *effect_lines]
+        battle_context = result.get("battle_context")
+        if battle_context:
+            return [f"Battle: {summarize_action_result(result)}"]
     live_context = state.get("battle_context")
     if live_context:
         return format_battle_context_lines(live_context)
-    last_context = get_last_battle_context(state)
-    if last_context:
-        return format_battle_context_lines(last_context)
     return ["No battle trace yet."]
 
 
@@ -439,6 +547,8 @@ def card_tile_lines(card: Dict[str, Any]) -> List[str]:
     attached = card.get("attached_don", 0)
     if state or attached:
         lines.append(f"{state or 'active'} | DON {attached}")
+    if card.get("rush"):
+        lines.append("Rush")
     return lines
 
 
@@ -475,6 +585,7 @@ def card_detail_lines(
         "state",
         "attached_don",
         "played_turn",
+        "rush",
     ):
         if key in card:
             lines.append(f"{key}: {card[key]}")
@@ -863,15 +974,42 @@ def process_correction_command(
             target = "leader"
         elif _normalize_zone(target_token) == "board":
             target = "board"
+        elif parts[2]:
+            target = parts[2]
         else:
-            return False, "Power target must be leader or board."
+            return False, "Power target must be leader, board, or a character instance id."
         amount = _parse_power_delta(parts[3])
         if amount is None:
             return False, "Power adjustment needs +1000 or -1000."
-        result = engine.manual_adjust_power(state, player_id, target, amount)
+        try:
+            result = engine.manual_adjust_power(state, player_id, target, amount)
+        except ValueError as exc:
+            return False, str(exc)
         _record_correction(state, raw, result)
         sign = "+" if amount > 0 else ""
         return True, f"Correction recorded: {player_id} {target} power {sign}{amount}."
+
+    if verb in {"rush", "unrush"} and len(parts) in (2, 3):
+        player_id = None
+        reference = parts[1]
+        if len(parts) == 3:
+            player_id = _normalize_player_id(parts[1])
+            if player_id is None:
+                return False, "Use P1/AI or P2/Human before the card reference."
+            reference = parts[2]
+        card, found_player, _found_zone, message = _resolve_correction_card(
+            state,
+            reference,
+            player_id=player_id,
+            zone="board",
+            include_leader=False,
+        )
+        if card is None or found_player is None:
+            return False, message
+        enabled = verb == "rush"
+        result = engine.manual_set_card_rush(state, found_player, card["instance_id"], enabled)
+        _record_correction(state, raw, result)
+        return True, f"Correction recorded: set Rush {'on' if enabled else 'off'} for {card['card_id']}."
 
     if verb == "remove" and len(parts) in (2, 3, 4):
         player_id = None
@@ -994,7 +1132,18 @@ def process_operator_command(
         return True, f"Applied manual command: {raw}"
 
     action = parse_command_to_action(raw)
-    if action and apply_operator_action(engine, state, action):
+    if action:
+        try:
+            engine.apply_action(state, action)
+        except InvalidActionError as exc:
+            if physical_play_report is not None and action.get("type") == "play_card":
+                return apply_physical_reported_play(
+                    engine,
+                    state,
+                    physical_play_report["card_id"],
+                    physical_play_report["state"],
+                )
+            return False, str(exc)
         if action["type"] == "end_turn":
             engine.end_phase(state)
             finish_opponent_intake_session(state, "completed")
@@ -1040,8 +1189,10 @@ class OperatorGUI(tk.Tk):
         state_path: str,
         use_fake_ai: bool = False,
         ai_mode: str = "gemini",
-        seed: int = 7,
+        seed: Optional[int] = None,
         match_mode: str = "digital_strict",
+        cards_path: str = "cards.json",
+        player_cards_path: Optional[str] = None,
     ) -> None:
         super().__init__()
         self.title("GLAT Operator Panel")
@@ -1051,6 +1202,8 @@ class OperatorGUI(tk.Tk):
         self.state_path = Path(state_path)
         agent = build_local_planning_agent(ai_mode, use_fake_ai=use_fake_ai)
         self.engine = GLATEngine(
+            cards_path=cards_path,
+            player_cards_path=player_cards_path,
             agent=agent,
             effect_choice_provider=self.gui_effect_choice,
             defense_choice_provider=self.gui_defense_choice,
@@ -1608,7 +1761,7 @@ class OperatorGUI(tk.Tk):
         if not ai_logs:
             append_console_entry(self.state, "AI", "Turn completed with no logged actions.", kind="ai")
         for log in ai_logs:
-            append_console_entry(self.state, "AI", summarize_action_log_entry(log), kind="ai")
+            append_console_entry(self.state, "AI", summarize_action_log_entry_with_effects(self.state, log), kind="ai")
         return True, "Ran AI turn."
 
     def _prepare_human_turn_from_console(self) -> Tuple[bool, str]:
@@ -1824,7 +1977,7 @@ class OperatorGUI(tk.Tk):
 
     def new_game(self) -> None:
         match_mode = self.state.get("match_mode", "digital_strict")
-        self.state = self.engine.create_initial_state(seed=7, match_mode=match_mode)
+        self.state = self.engine.create_initial_state(seed=None, match_mode=match_mode)
         append_console_entry(self.state, "System", f"Started {match_mode} match.", kind="system")
         self._save_and_refresh("Started a new game.")
 
@@ -1898,7 +2051,9 @@ class OperatorGUI(tk.Tk):
 def main() -> None:
     parser = argparse.ArgumentParser(description="GLAT local operator GUI")
     parser.add_argument("--state-out", default="cli_game_state.json")
-    parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--cards", default="cards.json", help="AI/P1 deck JSON path")
+    parser.add_argument("--player-cards", default=None, help="Player/P2 deck JSON path")
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--fake-ai", action="store_true", help="Use deterministic fake AI instead of Gemini")
     parser.add_argument(
         "--ai",
@@ -1920,6 +2075,8 @@ def main() -> None:
         ai_mode=args.ai,
         seed=args.seed,
         match_mode=args.match_mode,
+        cards_path=args.cards,
+        player_cards_path=args.player_cards,
     )
     app.mainloop()
 

@@ -250,7 +250,7 @@ def parse_natural_shorthand(command: str) -> Optional[Dict[str, Any]]:
         ("draw", r"^(?:(.+?)\s+)?(?:draw|drew)\s+(\d+)$"),
         ("trash_top", r"^(?:(.+?)\s+)?trash(?:ed)?\s+top\s+(\d+)$"),
         ("reveal_top", r"^(?:(.+?)\s+)?reveal(?:ed)?\s+top\s+(\d+)$"),
-        ("add_life", r"^(?:(.+?)\s+)?add(?:ed)?\s+(\d+)\s+life$"),
+        ("add_life", r"^(?:(.+?)\s+)?(?:add(?:ed)?|heal(?:ed)?)\s+(\d+)\s+life$"),
         ("set_state", r"^(?:set|made)\s+(.+?)\s+(active|rested)$"),
         ("life", r"^(?:(.+?)\s+)?(?:leader\s+)?(?:took|takes|lost|lose|resolved|resolve)\s+(\d+)\s+life$"),
     ]

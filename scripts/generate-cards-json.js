@@ -2,10 +2,41 @@ const fs = require("fs");
 const path = require("path");
 
 const projectRoot = path.resolve(__dirname, "..");
-const deckListPath = path.join(projectRoot, "cards.txt");
-const outputPath = path.join(projectRoot, "cards.json");
 const cardsIndexPath = path.join(projectRoot, "cards", "index", "cards_by_id.json");
 const cardsRootPath = path.join(projectRoot, "cards", "cards");
+
+function parseArgs(argv) {
+  const options = {
+    input: "cards.txt",
+    output: "cards.json",
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--input" || arg === "-i") {
+      options.input = argv[index + 1];
+      index += 1;
+    } else if (arg === "--output" || arg === "-o") {
+      options.output = argv[index + 1];
+      index += 1;
+    } else if (!arg.startsWith("-") && options.input === "cards.txt") {
+      options.input = arg;
+    } else if (!arg.startsWith("-") && options.output === "cards.json") {
+      options.output = arg;
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+
+  if (!options.input || !options.output) {
+    throw new Error("Usage: node scripts/generate-cards-json.js [--input cards.txt] [--output cards.json]");
+  }
+
+  return {
+    deckListPath: path.resolve(projectRoot, options.input),
+    outputPath: path.resolve(projectRoot, options.output),
+  };
+}
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -54,6 +85,7 @@ function resolveCardFile(cardId, indexEntry) {
 }
 
 function main() {
+  const { deckListPath, outputPath } = parseArgs(process.argv.slice(2));
   const deckLines = fs.readFileSync(deckListPath, "utf8").split(/\r?\n/);
   const deckEntries = deckLines
     .map((line, index) => parseDeckLine(line, index + 1))

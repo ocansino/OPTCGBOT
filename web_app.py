@@ -26,6 +26,7 @@ from operator_gui import (
     replay_snapshot_to_display_state,
     save_state,
     summarize_action_log_entry,
+    summarize_action_log_entry_with_effects,
     apply_operator_action,
 )
 from referee import get_legal_actions
@@ -57,6 +58,7 @@ def _card_view(card: Optional[Dict[str, Any]], hidden: bool = False) -> Dict[str
         "played_turn": card.get("played_turn"),
         "battle_power_bonus": card.get("battle_power_bonus", 0),
         "manual_power_bonus": card.get("manual_power_bonus", 0),
+        "rush": bool(card.get("rush", False)),
         "temporary_cost_bonus": card.get("temporary_cost_bonus", 0),
     }
 
@@ -212,16 +214,24 @@ class WebMatchSession:
     def __init__(
         self,
         state_path: str = DEFAULT_STATE_PATH,
-        seed: int = 7,
+        seed: Optional[int] = None,
         match_mode: str = "physical_reported",
         use_fake_ai: bool = False,
         ai_mode: str = "gemini",
+        cards_path: str = "cards.json",
+        player_cards_path: Optional[str] = None,
         auto_load: bool = True,
     ) -> None:
         self.state_path = Path(state_path)
         agent = build_local_planning_agent(ai_mode, use_fake_ai=use_fake_ai)
         self._active_defense_choice: Optional[Dict[str, Any]] = None
-        self.engine = GLATEngine(agent=agent, defense_choice_provider=self._web_defense_choice)
+        self.engine = GLATEngine(
+            cards_path=cards_path,
+            player_cards_path=player_cards_path,
+            agent=agent,
+            effect_choice_provider=self._web_effect_choice,
+            defense_choice_provider=self._web_defense_choice,
+        )
         if auto_load and self.state_path.exists():
             self.state = self.engine.load_state(str(self.state_path))
         else:
@@ -232,6 +242,18 @@ class WebMatchSession:
                 f"Started {self.state['match_mode']} match.",
                 kind="system",
             )
+
+    def _web_effect_choice(
+        self,
+        state: Dict[str, Any],
+        player_id: str,
+        prompt: str,
+        options: list[Dict[str, Any]],
+        optional: bool,
+    ) -> Optional[str]:
+        if player_id == HUMAN_PLAYER:
+            return None
+        return "__default__"
 
     def _web_defense_choice(
         self,
@@ -400,6 +422,105 @@ class WebMatchSession:
         return prompt
 
     def _run_ai_main_phase_until_prompt(self) -> bool:
+        if hasattr(self.engine.agent, "get_next_action"):
+            return self._run_ai_main_phase_replanning_until_prompt()
+        return self._run_ai_main_phase_planned_until_prompt()
+
+    def _scored_actions_view(self) -> list[Dict[str, Any]]:
+        return [
+            {
+                "index": item.index,
+                "action": copy.deepcopy(item.action),
+                "score": item.score,
+                "reasons": list(item.reasons),
+                "risk_flags": list(item.risk_flags),
+                "summary": item.summary,
+                "lookahead_score": item.lookahead_score,
+                "rollout_score": item.rollout_score,
+            }
+            for item in getattr(self.engine.agent, "last_scored_actions", [])
+        ]
+
+    def _run_ai_main_phase_replanning_until_prompt(self) -> bool:
+        self.state["phase"] = "main"
+        ai_debug_entry = {
+            "turn": self.state["turn"],
+            "player": self.state["active_player"],
+            "phase": self.state["phase"],
+            "planning_mode": "replan_each_action",
+            "legal_actions": [],
+            "scored_actions": [],
+            "decision_steps": [],
+            "planned_indices": [],
+            "planned_actions": [],
+            "executed_actions": [],
+            "fallback_end_turn": False,
+        }
+        self.state.setdefault("ai_debug_history", []).append(ai_debug_entry)
+
+        max_actions = int(getattr(self.engine.agent, "max_plan_actions", 6) or 6)
+        for step in range(max_actions):
+            if self.state["winner"]:
+                break
+            legal_actions = get_legal_actions(self.state, self.engine)
+            if not legal_actions:
+                break
+            if step == 0:
+                ai_debug_entry["legal_actions"] = [copy.deepcopy(action) for action in legal_actions]
+
+            raw_index = self.engine.agent.get_next_action(self.state, legal_actions)
+            scored_actions = self._scored_actions_view()
+            if step == 0:
+                ai_debug_entry["scored_actions"] = scored_actions
+            ai_debug_entry["decision_steps"].append(
+                {
+                    "step": step + 1,
+                    "legal_actions": [copy.deepcopy(action) for action in legal_actions],
+                    "scored_actions": scored_actions,
+                    "chosen_index": raw_index,
+                }
+            )
+            ai_debug_entry["planned_indices"].append(raw_index)
+
+            if not isinstance(raw_index, int) or not (0 <= raw_index < len(legal_actions)):
+                ai_debug_entry["executed_actions"].append(
+                    {"status": "skipped_invalid_index", "planned_index": raw_index}
+                )
+                break
+
+            action = copy.deepcopy(legal_actions[raw_index])
+            ai_debug_entry["planned_actions"].append(copy.deepcopy(action))
+            if not self.engine.is_valid_action(self.state, action):
+                ai_debug_entry["executed_actions"].append(
+                    {
+                        "status": "skipped_invalid",
+                        "planned_index": raw_index,
+                        "action": copy.deepcopy(action),
+                    }
+                )
+                break
+
+            if self._attack_defense_prompt(action, ai_debug_entry, raw_index) is not None:
+                return True
+
+            self.engine.apply_action(self.state, action)
+            ai_debug_entry["executed_actions"].append(
+                {
+                    "status": "applied",
+                    "planned_index": raw_index,
+                    "action": copy.deepcopy(action),
+                }
+            )
+            if action["type"] == "end_turn":
+                return False
+
+        fallback_end_turn = {"type": "end_turn", "payload": {}}
+        if self.engine.is_valid_action(self.state, fallback_end_turn):
+            ai_debug_entry["fallback_end_turn"] = True
+            self.engine.apply_action(self.state, fallback_end_turn)
+        return False
+
+    def _run_ai_main_phase_planned_until_prompt(self) -> bool:
         self.state["phase"] = "main"
         legal_actions = get_legal_actions(self.state, self.engine)
         if not legal_actions:
@@ -408,22 +529,14 @@ class WebMatchSession:
         planned_indices = self.engine.agent.get_turn_plan(self.state, legal_actions)
         if not isinstance(planned_indices, list) or not planned_indices:
             planned_indices = [len(legal_actions) - 1]
-        scored_actions = getattr(self.engine.agent, "last_scored_actions", [])
+        scored_actions = self._scored_actions_view()
         ai_debug_entry = {
             "turn": self.state["turn"],
             "player": self.state["active_player"],
             "phase": self.state["phase"],
+            "planning_mode": "static_turn_plan",
             "legal_actions": [copy.deepcopy(action) for action in legal_actions],
-            "scored_actions": [
-                {
-                    "index": item.index,
-                    "action": copy.deepcopy(item.action),
-                    "score": item.score,
-                    "reasons": list(item.reasons),
-                    "risk_flags": list(item.risk_flags),
-                }
-                for item in scored_actions
-            ],
+            "scored_actions": scored_actions,
             "planned_indices": list(planned_indices),
             "planned_actions": [
                 copy.deepcopy(legal_actions[index])
@@ -510,7 +623,7 @@ class WebMatchSession:
             if log.get("player") == AI_PLAYER
         ]
         for log in ai_logs:
-            append_console_entry(self.state, "AI", summarize_action_log_entry(log), kind="ai")
+            append_console_entry(self.state, "AI", summarize_action_log_entry_with_effects(self.state, log), kind="ai")
 
         self.state["pending_web_prompt"] = None
         append_console_entry(
@@ -547,10 +660,10 @@ class WebMatchSession:
         if not ai_logs:
             append_console_entry(self.state, "AI", "Turn completed with no logged actions.", kind="ai")
         for log in ai_logs:
-            append_console_entry(self.state, "AI", summarize_action_log_entry(log), kind="ai")
+            append_console_entry(self.state, "AI", summarize_action_log_entry_with_effects(self.state, log), kind="ai")
         return self._control_response(True, "Ran AI turn.", command.strip())
 
-    def new_game(self, seed: int = 7, match_mode: str = "physical_reported") -> Dict[str, Any]:
+    def new_game(self, seed: Optional[int] = None, match_mode: str = "physical_reported") -> Dict[str, Any]:
         self.state = self.engine.create_initial_state(seed=seed, match_mode=match_mode)
         append_console_entry(
             self.state,
@@ -642,7 +755,7 @@ class CockpitRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(self.session.end_human_turn())
                 return
             if parsed.path == "/api/new-game":
-                seed = int(payload.get("seed", 7))
+                seed = int(payload["seed"]) if "seed" in payload and payload["seed"] is not None else None
                 match_mode = str(payload.get("match_mode", "physical_reported"))
                 self._send_json(self.session.new_game(seed=seed, match_mode=match_mode))
                 return
@@ -665,10 +778,12 @@ def create_server(
     host: str = "127.0.0.1",
     port: int = 8765,
     state_path: str = DEFAULT_STATE_PATH,
-    seed: int = 7,
+    seed: Optional[int] = None,
     match_mode: str = "physical_reported",
     use_fake_ai: bool = False,
     ai_mode: str = "gemini",
+    cards_path: str = "cards.json",
+    player_cards_path: Optional[str] = None,
 ) -> ThreadingHTTPServer:
     session = WebMatchSession(
         state_path=state_path,
@@ -676,6 +791,8 @@ def create_server(
         match_mode=match_mode,
         use_fake_ai=use_fake_ai,
         ai_mode=ai_mode,
+        cards_path=cards_path,
+        player_cards_path=player_cards_path,
     )
 
     class Handler(CockpitRequestHandler):
@@ -690,7 +807,9 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--state", default=DEFAULT_STATE_PATH)
-    parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--cards", default="cards.json", help="AI/P1 deck JSON path.")
+    parser.add_argument("--player-cards", default=None, help="Player/P2 deck JSON path.")
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--match-mode", choices=["digital_strict", "physical_reported"], default="physical_reported")
     parser.add_argument("--fake-ai", action="store_true", help="Use deterministic local AI instead of Gemini.")
     parser.add_argument(
@@ -709,6 +828,8 @@ def main() -> None:
         match_mode=args.match_mode,
         use_fake_ai=args.fake_ai,
         ai_mode=args.ai,
+        cards_path=args.cards,
+        player_cards_path=args.player_cards,
     )
     print(f"GLAT web cockpit listening at http://{args.host}:{args.port}")
     try:

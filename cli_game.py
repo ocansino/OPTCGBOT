@@ -939,7 +939,7 @@ def run_manual_command(engine: GLATEngine, state: Dict[str, Any], command: str) 
             )
             return True
 
-        if verb == "add_life" and len(parts) in (2, 3):
+        if verb in {"add_life", "heal"} and len(parts) in (2, 3):
             amount = int(parts[1])
             player_id = player_arg(parts, 2)
             print("Added life cards:", engine.manual_add_life(state, player_id, amount))
@@ -1751,6 +1751,8 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--state-out", default="cli_game_state.json")
     parser.add_argument("--load-state", default=None, help="Resume from an existing saved game state JSON")
+    parser.add_argument("--cards", default="cards.json", help="AI/P1 deck JSON path")
+    parser.add_argument("--player-cards", default=None, help="Player/P2 deck JSON path")
     parser.add_argument("--fake-ai", action="store_true", help="Use deterministic fake AI instead of Gemini")
     parser.add_argument(
         "--ai",
@@ -1763,6 +1765,8 @@ def main() -> None:
 
     agent = build_local_planning_agent(args.ai, use_fake_ai=args.fake_ai)
     engine = GLATEngine(
+        cards_path=args.cards,
+        player_cards_path=args.player_cards,
         agent=agent,
         effect_choice_provider=cli_effect_choice,
         defense_choice_provider=cli_defense_choice,
@@ -1779,7 +1783,7 @@ def main() -> None:
     if args.load_state:
         print(f"Resumed game from: {Path(args.load_state).resolve()}")
     else:
-        print("Both P1 and P2 decks were built from cards.json.")
+        print("P1 AI deck built from cards.json; P2 player deck built from player_cards.json when present.")
     print(f"State file: {Path(args.state_out).resolve()}")
 
     if args.demo_turns > 0:

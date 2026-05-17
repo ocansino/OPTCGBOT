@@ -61,7 +61,8 @@ Primary product surface direction:
 2. Current Status
 
 What is already built:
-- cards.txt -> cards.json deck extraction pipeline
+- cards.txt -> cards.json AI deck extraction pipeline
+- player_cards.txt -> player_cards.json player/default deck extraction pipeline
 - local deck/card data loading from the One Piece card JSON files
 - a Phase 1 deterministic OPCG engine in glat_engine.py
 - turn phases: refresh, draw, don, main, end
@@ -77,10 +78,11 @@ What is already built:
   - Gemini can return a short ordered turn plan
   - engine validates and executes each chosen step
   - engine safely falls back to end_turn when needed
-- both P1 and P2 decks are built from cards.json
+- P1 and P2 can now use separate strict-mode deck definitions: cards.json for the AI seat and player_cards.json for the player seat
 - guided CLI game loop in cli_game.py for real local play/testing
 - local operator GUI in operator_gui.py for match control and intake/testing
 - first-pass table-shaped GUI with visible zones, compact card tiles, hidden life display, click-to-inspect card details, replay navigation, and horizontally scrollable card zones
+- first-pass local web cockpit with readable board state, fixed-size scrollable chat log, replay tab, prompt buttons, AI debug output, and command help modal
 - save/load and mid-game resume support for CLI engine games
 - manual state/effect helpers for:
   - draw
@@ -111,6 +113,8 @@ What is already built:
 - physical_reported mode support where human-side reported plays can instantiate known card IDs from the broader local card database
 - guided unsupported-effect handling for physical reports through skip, manual-done, note-only, or implement-later paths
 - first-pass auditable correction commands for physical-table drift, including life correction, card state correction, moving tracked cards between zones, and removing tracked cards to trash
+- manual card-control commands for common physical-table corrections and effect simulation, including individual character power adjustment, board/leader-wide power adjustment, active/rested toggles, played-rested reporting, and temporary Rush assignment
+- clearer battle/counter summaries in the cockpit/operator timeline so blocked or countered attacks do not expose raw battle JSON to the player
 - regression pressure tests for physical-reported turns flowing through console commands into AI responses without terminal-only interaction, including a multi-turn flow with correction and unsupported-effect handling
 - first-pass correction lookup helpers through find/where commands so ambiguous card references can be resolved by player, zone, and instance id
 - targeted static effect support for OP12-021 as a printed blocker, while other unsupported text remains manually resolved until implemented
@@ -128,6 +132,7 @@ Important implementation note:
 - defensive play now has an explicit engine-managed battle flow for the supported scope
 - strict digital testing and flexible physical-table reporting now have an explicit first-pass separation
 - the remaining gaps are mostly replay/debugging depth, longer real-game pressure testing, correction ergonomics, and broader card/timing coverage
+- the current web cockpit is usable enough for practice games, but still needs long-game polish around command discovery, replay/export, and correction workflows
 - the next product direction is to make longer physical-table games trustworthy: easy correction, clear replay inspection, and low-friction reporting over many turns
 - the project has crossed from "prototype UI wrapped around an engine" into "early operator tool"; the main risk is now friction and state drift during real physical matches
 
@@ -135,9 +140,16 @@ Important implementation note:
 3. Current Architecture
 
 cards.json
-- stores the chosen deck list and card details
-- remains the core deck-definition source for strict digital games and AI deck construction
+- stores the chosen AI deck list and card details
+- remains the default deck-definition source for AI deck construction and P1 strict digital setup
 - should not be the only source for physical-table human card reports; physical mode needs lookup access to the broader local card database
+
+player_cards.json
+- stores the chosen player/default strict-mode deck list and card details
+- lets the human/default seat keep a stable deck while the AI deck is changed for heuristic testing
+- is generated from player_cards.txt by the same deck extraction script
+- if player_cards.json is missing, the engine falls back to cards.json for backward compatibility
+- CLI, operator GUI, and web cockpit entry points accept --cards and --player-cards overrides for explicit deck pairing tests
 
 glat_engine.py
 - main game engine
@@ -476,9 +488,11 @@ Recommended web cockpit shape:
   - later filters by turn/player/action type
 
 Command console still needed / in progress:
-- continue improving the match as a chat-like action timeline
+- continue improving the match as a chat-like action timeline; the current cockpit keeps chat fixed-size/scrollable and lets the replay timeline share the same side-panel space behind a tab
+- keep the Help button command list current whenever new manual commands are added
 - continue accepting compact structured commands like:
   - play OP12-021
+  - play rested OP12-021
   - attach 1 leader
   - attack OP12-094 leader
   - counter OP12-098 leader
@@ -486,6 +500,8 @@ Command console still needed / in progress:
 - support correction commands such as:
   - correct life P2 3
   - set OP12-119 rested
+  - rush OP12-119
+  - power P2 OP12-119 +1000
   - move OP12-119 board trash
   - remove OP12-021
   - find OP12-021 board
@@ -501,20 +517,20 @@ Command console still needed / in progress:
 - add longer-turn pressure tests that combine searchers, unsupported effects, attacks, corrections, and AI responses
 
 Web cockpit first-pass endpoints:
-- GET /state
+- GET /api/state
   - returns display-safe match state
-- POST /command
+- POST /api/command
   - accepts structured text commands like play OP12-021, attack leader, counter 2k, trigger, end turn
   - returns updated state, new chat messages, and any pending prompt
-- POST /choice
+- POST /api/choice
   - resolves pending prompts from buttons/chips
-- GET /replay
+- GET /api/replay
   - returns replay entries and selected before/after snapshots
 - optional later:
-  - POST /new-game
-  - POST /save
-  - POST /load
-  - POST /ai-turn
+  - POST /api/new-game
+  - POST /api/save
+  - POST /api/load
+  - POST /api/ai-turn
 
 Replay viewer still needed:
 - keep improving step-through saved game browsing now that replay entries are selectable
@@ -560,12 +576,12 @@ Notes:
 
 
 Phase I: Heuristic Planning Agent
-Status: Future / Recommended Next AI Direction
+Status: Active / Core heuristic, effect-choice, opponent-awareness, and shallow rollout passes implemented
 
 Core direction:
-- add a deterministic HeuristicPlanningAgent as a separate game-AI policy
-- this agent should not use an LLM API as its core move selector
-- the heuristic agent should receive engine state plus engine-generated legal actions, score those legal actions, and choose only from that list
+- use a deterministic HeuristicPlanningAgent as a separate game-AI policy
+- this agent does not use an LLM API as its core move selector
+- the heuristic agent receives engine state plus engine-generated legal actions, scores those legal actions, and chooses only from that list
 - the rules engine/referee remain authoritative for legal action generation and state mutation
 - an LLM can remain optional for explanation, coaching, post-game review, or developer assistance, but should not be required for normal AI turn execution
 
@@ -575,12 +591,12 @@ Reasoning:
 - a custom trained transformer is premature until the project has a large dataset of states, legal actions, chosen actions, and outcomes from real or self-play games
 - the right near-term path is deterministic heuristics first, then search/self-play data, then possibly a learned policy or value model later
 
-Proposed implementation shape:
-- introduce a common planning interface:
+Implemented shape:
+- common planning interface:
   - get_next_action(state, legal_actions) -> action index
   - get_turn_plan(state, legal_actions) -> list of action indices, mostly for compatibility
 - keep FakePlanningAgent for smoke tests and deterministic low-quality behavior
-- add HeuristicPlanningAgent for normal local AI play
+- use HeuristicPlanningAgent for normal local AI play
 - later add optional policy variants:
   - fake
   - heuristic
@@ -588,11 +604,11 @@ Proposed implementation shape:
   - llm-assisted
   - learned
 
-Important execution change:
-- prefer one-action-at-a-time planning for the heuristic agent
+Important execution behavior:
+- use one-action-at-a-time planning for the heuristic agent
 - after each action is applied, regenerate legal actions and score again
 - this avoids stale action-index plans after board, DON, hand, or battle state changes
-- the web cockpit AI loop should eventually ask the planning agent for the next action repeatedly until it chooses end_turn, hits a prompt, wins/loses, or reaches a safety action cap
+- the web cockpit AI loop asks the planning agent for the next action repeatedly until it chooses end_turn, hits a prompt, wins/loses, or reaches a safety action cap
 
 Scoring output:
 - every candidate action should receive:
@@ -624,15 +640,35 @@ First-pass scoring categories:
   - heavily penalize while good plays or attacks remain
   - choose when no positive-score action remains
 
-First milestone:
+First milestone status:
 - HeuristicPlanningAgent can:
-  - play a reasonable legal card
-  - attach DON to a sensible attacker
-  - attack with leader when legal
+  - play reasonable legal cards from hand
+  - attach DON to sensible attackers and threshold breakpoints
+  - use leader attacks when legal and valuable
   - attack profitable rested characters
-  - attack leader with remaining attackers when positive
+  - choose between board pressure and life pressure
+  - preserve blocker-like/value attackers when behind unless the payoff is strong
   - end turn when no useful actions remain
-  - expose score/reason debug output in the cockpit
+  - expose score, reason, risk flag, summary, lookahead, and rollout debug output in the cockpit/operator paths
+- the web cockpit supports heuristic mode and replans after each action
+- current AI-deck effect inventory is tracked, and the refreshed 51-card AI deck currently has no manual-required entries in the inventory report
+- the active AI leader is OP12-081 Koala; the player/default leader is OP09-062 Nico Robin
+- generic Banish damage support is implemented for cards that actually have Banish, so successful Nico Robin life damage trashes life and skips triggers while Koala leader attacks do not Banish
+- scripts/effect_inventory.py provides a repeatable inventory pass over the active deck so supported, static, partial, and manual-required effects are visible before implementing more card text
+- latest targeted additions include OP07-085 Stussy, EB04-058 Borsalino, and EB03-056 Belo Betty as structured engine effects
+- heuristic-owned effect choices are implemented for search/add-to-hand, discard costs, KO targets, and play-from-hand/trash style prompts
+- effect choices are recorded in effect_choice_history with options, chosen card, scores, and reasons so the data can later support supervised learning
+- opponent-response awareness now includes visible counter risk, active blocker pressure, known/face-up trigger risk, and crack-back risk after resting valuable characters
+- shallow rollout scoring is implemented:
+  - approximate action simulation
+  - state evaluation over life, board, hand, blockers, and ready attackers
+  - best-follow-up bonus
+  - rollout_score debug output for training/evaluation traces
+- default AI blocking is value-based:
+  - survive blocks when possible
+  - avoid early low-payoff chump blocks
+  - sacrifice low-value blockers when life is low
+  - sacrifice blockers to protect valuable rested characters when the trade is worthwhile
 
 Safety rails:
 - never choose actions outside get_legal_actions
@@ -641,6 +677,47 @@ Safety rails:
 - cap actions per AI turn
 - log every decision and score breakdown
 - keep deterministic behavior by default so bugs are reproducible
+
+Remaining heuristic work:
+- tune weights against longer real games instead of only focused test scenarios
+- expand effect-choice scoring as more effects expose explicit legal choices
+- replace approximate opponent-response heuristics with better response estimates as hidden-information and matchup data improve
+- deepen rollout/search carefully, especially around multi-action sequencing, opponent turn simulation, and effect-driven branches
+- add matchup/deck-specific scoring knobs once more decks are supported
+- improve cockpit diagnostics for why the agent chose one line over close alternatives
+- export clean decision logs that can become training data for future learned policies
+- add batch evaluation: fixed scenario suite, AI-vs-AI smoke games, and win-rate/blunder metrics against fake and older heuristic baselines
+
+
+Future Learned Agent Direction
+Status: Feasible later / Not the next core dependency
+
+Core idea:
+- use human games, heuristic AI games, and AI vs AI self-play logs to train an agent that improves over time
+- the learned agent should still receive engine-generated legal actions and rank those actions; it should not generate arbitrary free-form moves
+- the engine remains the source of truth for legality, effects, state mutation, and prompts
+- the heuristic agent becomes the baseline, teacher, and regression opponent for early learning work
+
+Recommended learning path:
+- first collect high-quality decision logs:
+  - public game state features
+  - hidden-zone-safe private features for the acting player
+  - legal action list
+  - chosen action
+  - heuristic scores/reasons when available
+  - actor source, such as human, heuristic, fake, or future learned
+  - outcome labels such as damage dealt, board swing, turn result, game result, and final winner
+- start with an action-ranking policy/value model over structured features
+  - gradient boosted trees or a small neural MLP are better first models than a transformer
+  - model output should score legal action candidates, not produce text
+- later add a policy/value network that can support shallow search or MCTS-style planning
+- consider transformer-style models only after the project has a large dataset and a clearer need to encode card text, long histories, or broad deck diversity
+- evaluate learned agents with fixed scenario tests, holdout logs, win rate against fake/heuristic baselines, and blunder checks before letting them drive normal play
+
+Why not an LLM or transformer first:
+- the game state and legal actions are structured, so a structured action-ranker is simpler, cheaper, and easier to debug
+- transformers need much more data and are most useful when sequence/text understanding is the bottleneck
+- early project value comes from better logging, legal action quality, effect coverage, and evaluation harnesses, not from model size
 
 
 5. Priority Order From Here
@@ -654,27 +731,27 @@ Current updated order after the intake/parser/operator-GUI and battle-stabilizat
 - 4. Completed guided pass: unsupported-effect handling paths for skip, manual done, note-only, and implement-later workflows
 - 5. Completed first pressure pass: a physical-reported human turn can flow through console commands and hand back to AI response without reconstruction
 - 6. Completed first longer pressure pass: multi-turn physical-reported flow with correction, unsupported-effect handling, and AI responses
-- 7. Active priority: continue improving correction/reconciliation UX for physical table drift with auditable console commands
+- 7. Active priority: continue improving correction/reconciliation UX for physical table drift with auditable console/web commands
 - 8. Completed first pass: replay entries are selectable and tied to before/after board snapshots and selected-step diffs
-- 9. Move legal action generation closer to engine ownership or formalize its boundary
-- 10. Continue targeted card-effect support only where needed for the chosen deck or new test scenarios; OP12-021 blocker support is now implemented
-- 11. Improve AI planning around effect choices, offensive sequencing, and future defensive choices
-- 12. Add post-game review and lesson tracking
-- 13. Add AI vs AI self-play/training modes on top of the same engine
+- 9. Completed first pass: local web cockpit with command chat, board state, pending prompts, replay/debug surfaces, and heuristic AI mode
+- 10. Completed first pass: heuristic planning agent with one-action replanning, score/reason debug, board-vs-life targeting, and value-based default blocking
+- 11. Completed first pass: heuristic effect-choice scoring, opponent-response awareness, and shallow rollout scoring
+- 12. Completed first pass: cockpit practice-game ergonomics including fixed chat/replay tabs, command help, individual character power controls, manual active/rested state, played-rested reporting, Rush override, and cleaner battle/counter summaries
+- 13. Completed current pass: refreshed deck/effect inventory has coverage for the current active AI deck, with Koala as the AI leader and Nico Robin/Banish support available on the player side
+- 14. Active priority: continue targeted card-effect support only when the deck changes or new test scenarios expose missing behavior
+- 15. Active priority: tune/evaluate the heuristic agent with longer games, scenario metrics, and AI-vs-AI/self-play scaffolding
+- 16. Add decision-log export, post-game review, lesson tracking, and learned policy experiments on top of the same engine
 
 Near-term recommended attack plan:
-- 1. Build a thin local web backend around the current engine/session state.
-- 2. Expose command-first endpoints for state, command submission, pending choices, and replay.
-- 3. Build a first-pass web match cockpit with board-left/chat-right layout.
-- 4. Route the existing structured command console flow through the web chat panel.
-- 5. Show pending searcher/effect/trigger/blocker/counter choices as buttons or chips in the chat panel.
-- 6. Preserve the Tkinter operator GUI as a debug tool, but stop treating it as the final product surface.
-- 7. Run longer physical-table smoke games through the web cockpit and record every moment where reporting feels awkward, ambiguous, or requires correction.
-- 8. Improve correction UX around the patterns found in those smoke games, especially ambiguous card references, hidden-zone mismatches, mistaken life totals, and accidental state changes.
-- 9. Add replay filters and better replay-to-log linking so a long match can be audited without scanning the whole timeline manually.
-- 10. Move or formalize legal action generation so the engine/referee boundary is clearer before AI behavior becomes more complex.
-- 11. Add card effects only when they block a real test scenario; keep unsupported effects explicit and manually resolvable instead of implementing a broad rules parser prematurely.
-- 12. Once long physical matches are comfortable, revisit AI decision quality and post-game review.
+- 1. Run longer physical-table smoke games through the web cockpit and record every moment where reporting feels awkward, ambiguous, or requires correction.
+- 2. Treat those games as data-quality passes: keep the Help modal accurate, add command aliases for repeated friction, and make error messages name the real rule/state issue whenever possible.
+- 3. Continue targeted card effects only when they block a real test scenario; use the effect inventory script to decide whether a card should be automatic, static/partial, or manual-required.
+- 4. Add replay filters, decision-log export, and better replay-to-log linking so a long match can be audited without scanning the whole timeline manually.
+- 5. Build an agent evaluation harness: fixed tactical scenarios, AI-vs-AI smoke games, score-trace snapshots, and win-rate/blunder metrics.
+- 6. Tune heuristic weights from the evaluation harness and real cockpit games.
+- 7. Move or formalize legal action generation so the engine/referee boundary is clearer before AI behavior becomes more complex.
+- 8. Add post-game review and lesson tracking once match logs are clean enough to trust.
+- 9. Add learned policy experiments after decision logs and evaluation scenarios are stable.
 
 Current project assessment:
 - Reliable now:
@@ -684,19 +761,28 @@ Current project assessment:
   - AI action execution through engine-generated legal actions
   - physical_reported human play-by-ID flow for known card IDs
   - separate match console for commands, AI action reporting, choices, corrections, and manual effect notes
+  - local web cockpit for chat-first play, board inspection, pending prompts, replay timeline, command help, and AI debug output
+  - practice-game correction tools for individual/board/leader power adjustment, active/rested card state, played-rested entries, and Rush overrides
+  - heuristic AI mode with one-action replanning, score explanations, board-vs-life targeting, value-based blocking, effect-choice scoring, opponent-response awareness, and shallow rollout scoring
+  - current AI-deck effect inventory and targeted implementation for the effects needed by the active 51-card AI deck
+  - separate AI/player deck files, with OP12-081 Koala for AI and OP09-062 Nico Robin for the player/default side
+  - Banish life-damage handling for cards that actually have Banish, without giving that effect to Koala
+  - effect_choice_history and scored action traces that can become training/evaluation data
   - replay snapshots, selected replay diffs, and before/after board inspection
   - regression coverage for the current operator and engine milestones
 - Fragile or incomplete:
   - long real physical games have not been pressure-tested enough to know the most painful reporting/correction loops
+  - command coverage is broader than before, but new commands still need to be mirrored in the Help modal and examples whenever added
   - legal action generation still being outside the main engine file can make future ownership confusing
   - unsupported card text is intentionally not automated unless specifically implemented
-  - replay browsing is useful for debugging but not yet comfortable for full-match review
+  - replay browsing is useful for debugging but still needs better filters/export and stronger links to AI decisions, battle traces, and later training logs
   - Tkinter is useful for prototyping, but it is likely not the best final surface for a chat-first physical-table assistant
-  - AI strategy quality is still secondary to legality, state trust, and operator usability
+  - AI strategy quality has a useful heuristic baseline, but weights are not yet tuned against long games or measured against a stable evaluation harness
+  - learned/self-play workflows are still incomplete
 - Overall:
   - GLAT is now close to a usable physical-table training assistant for the current deck/testing scope
-  - the engine is no longer the obvious blocker for the next phase
-  - the highest-impact next work is a thin web cockpit that reuses the existing engine and command flow while giving the player a better chat-and-board experience
+  - the engine and web cockpit are no longer the obvious blockers for the next phase
+  - the highest-impact next work is cleaner long-game data: command ergonomics, correction ergonomics, replay/export, targeted effect coverage, and agent evaluation
 
 
 

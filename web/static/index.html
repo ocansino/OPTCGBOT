@@ -14,6 +14,7 @@
           <div id="matchMeta" class="match-meta">Loading match...</div>
         </div>
         <div class="top-actions">
+          <button id="helpBtn" type="button">Help</button>
           <button id="refreshBtn" type="button">Refresh</button>
           <button id="newGameBtn" type="button">New Game</button>
           <button id="saveBtn" type="button">Save</button>
@@ -86,6 +87,68 @@
           <h2>AI Debug</h2>
           <pre id="aiDebug" class="debug-text"></pre>
         </article>
+      </section>
+    </div>
+
+    <div id="helpModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <section class="help-modal">
+        <header class="modal-header">
+          <h2 id="helpTitle">Command Help</h2>
+          <button id="helpCloseBtn" type="button" aria-label="Close command help">Close</button>
+        </header>
+        <div class="help-grid">
+          <section>
+            <h3>Turn Flow</h3>
+            <code>prepare human turn</code>
+            <code>end human turn</code>
+            <code>run ai turn</code>
+            <code>end</code>
+          </section>
+          <section>
+            <h3>Play And Battle</h3>
+            <code>play OP12-021</code>
+            <code>play rested OP12-021</code>
+            <code>attach 1 leader</code>
+            <code>attach P2-CARD-052 1</code>
+            <code>attack leader leader</code>
+            <code>attack P2-CARD-052 leader</code>
+          </section>
+          <section>
+            <h3>Card State</h3>
+            <code>set P2-CARD-052 rested</code>
+            <code>set P2-CARD-052 active</code>
+            <code>rush P2-CARD-052</code>
+            <code>rush P2 P2-CARD-052</code>
+            <code>unrush P2-CARD-052</code>
+          </section>
+          <section>
+            <h3>Power</h3>
+            <code>power P2 leader +1000</code>
+            <code>power P2 leader -1000</code>
+            <code>power P2 board +1000</code>
+            <code>power P2 P2-CARD-052 +1000</code>
+          </section>
+          <section>
+            <h3>Corrections</h3>
+            <code>find OP12-021 board</code>
+            <code>correct life P2 3</code>
+            <code>remove P2-CARD-052</code>
+            <code>move P2-CARD-052 board trash</code>
+          </section>
+          <section>
+            <h3>Manual Effects</h3>
+            <code>manual done</code>
+            <code>skip effect</code>
+            <code>note resolved manually</code>
+            <code>implement later</code>
+            <code>draw 1 P2</code>
+            <code>trash_top 1 P2</code>
+            <code>reveal_top 3 P2</code>
+            <code>heal 1 P2</code>
+            <code>add_life 1 P2</code>
+            <code>take_life 1 P2</code>
+          </section>
+        </div>
       </section>
     </div>
 

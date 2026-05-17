@@ -22,6 +22,7 @@ class GLATEngine:
     def __init__(
         self,
         cards_path: str = "cards.json",
+        player_cards_path: Optional[str] = None,
         agent: Optional[Any] = None,
         effect_choice_provider: Optional[Any] = None,
         defense_choice_provider: Optional[Any] = None,
@@ -29,8 +30,14 @@ class GLATEngine:
         cards_root: str = "cards",
     ) -> None:
         self.cards_path = Path(cards_path)
+        self.player_cards_path = Path(player_cards_path) if player_cards_path else Path("player_cards.json")
         self.cards_root = Path(cards_root)
-        self.deck_definition = self._load_deck_definition()
+        self.ai_deck_definition = self._load_deck_definition(self.cards_path)
+        if player_cards_path is not None or self.player_cards_path.exists():
+            self.player_deck_definition = self._load_deck_definition(self.player_cards_path)
+        else:
+            self.player_deck_definition = self.ai_deck_definition
+        self.deck_definition = self.ai_deck_definition
         self.catalog = self._build_catalog()
         self.full_catalog = self._build_full_catalog()
         self.instance_counters: Dict[str, int] = {"P1": 0, "P2": 0}
@@ -39,14 +46,14 @@ class GLATEngine:
         self.defense_choice_provider = defense_choice_provider
         self.trigger_choice_provider = trigger_choice_provider
 
-    def _load_deck_definition(self) -> List[Dict[str, Any]]:
-        with self.cards_path.open("r", encoding="utf-8") as file:
+    def _load_deck_definition(self, path: Path) -> List[Dict[str, Any]]:
+        with path.open("r", encoding="utf-8") as file:
             return json.load(file).get("cards", [])
 
     def _build_catalog(self) -> Dict[str, Dict[str, Any]]:
         return {
             card["id"].upper(): card
-            for card in self.deck_definition
+            for card in [*self.ai_deck_definition, *self.player_deck_definition]
             if card.get("id")
         }
 
@@ -90,7 +97,8 @@ class GLATEngine:
         return type_name in self._card_types(player["leader"]["card_id"])
 
     def _leader_is_multicolored(self, player: Dict[str, Any]) -> bool:
-        colors = self.catalog[player["leader"]["card_id"].upper()].get("colors", [])
+        card_data = self.lookup_card_data(player["leader"]["card_id"]) or {}
+        colors = card_data.get("colors", player["leader"].get("colors", []))
         return len(colors) > 1
 
     def _has_blocker(self, player: Dict[str, Any], card: Dict[str, Any]) -> bool:
@@ -101,19 +109,28 @@ class GLATEngine:
             return self._leader_has_type(player, "Revolutionary Army")
         if card_id == "OP12-087":
             return player["leader"]["card_id"] in {"OP12-081"} or player["leader"].get("name") in {"Koala", "Monkey.D.Luffy"}
+        if card_id == "EB04-058":
+            return True
         if card_id == "OP12-021":
             card_data = self.lookup_card_data(card_id) or {}
             return "[Blocker]" in (card_data.get("effect") or "")
         return False
 
+    def _has_banish(self, card: Dict[str, Any]) -> bool:
+        card_data = self.lookup_card_data(card.get("card_id", "")) or {}
+        return "[Banish]" in (card_data.get("effect") or "")
+
     def _leader_life(self, leader_card: Dict[str, Any]) -> int:
         return 4 if len(leader_card.get("colors", [])) > 1 else 5
 
-    def _deck_entries(self) -> tuple[Dict[str, Any], List[str]]:
+    def _deck_entries(
+        self,
+        deck_definition: Optional[List[Dict[str, Any]]] = None,
+    ) -> tuple[Dict[str, Any], List[str]]:
         leader: Optional[Dict[str, Any]] = None
         deck_ids: List[str] = []
 
-        for card in self.deck_definition:
+        for card in deck_definition or self.ai_deck_definition:
             card_id = card["id"].upper()
             amount = int(card.get("amount", 0))
             if card.get("category") == "Leader":
@@ -122,7 +139,7 @@ class GLATEngine:
             deck_ids.extend([card_id] * amount)
 
         if leader is None:
-            raise ValueError("cards.json must contain exactly one leader entry")
+            raise ValueError("Deck definition must contain exactly one leader entry")
         if len(deck_ids) != 50:
             raise ValueError(f"Expected a 50-card deck, found {len(deck_ids)} cards")
 
@@ -149,6 +166,7 @@ class GLATEngine:
             "played_turn": None,
             "battle_power_bonus": 0,
             "manual_power_bonus": 0,
+            "rush": False,
             "temporary_cost_bonus": 0,
             "temporary_cost_bonus_expires": None,
         }
@@ -203,19 +221,23 @@ class GLATEngine:
 
     def create_initial_state(
         self,
-        seed: int = 7,
+        seed: Optional[int] = 7,
         mulligans: Optional[Dict[str, bool]] = None,
         match_mode: str = "digital_strict",
     ) -> Dict[str, Any]:
         if match_mode not in MATCH_MODES:
             raise ValueError(f"Invalid match_mode: {match_mode}")
         self.instance_counters = {"P1": 0, "P2": 0}
-        leader_card, deck_ids = self._deck_entries()
+        ai_leader_card, ai_deck_ids = self._deck_entries(self.ai_deck_definition)
+        player_leader_card, player_deck_ids = self._deck_entries(self.player_deck_definition)
+        if seed is None:
+            seed = random.SystemRandom().randrange(1, 2**31)
         rng = random.Random(seed)
         mulligans = mulligans or {}
 
         state = {
             "turn": 1,
+            "setup_seed": seed,
             "match_mode": match_mode,
             "active_player": "P1",
             "first_player": "P1",
@@ -229,15 +251,15 @@ class GLATEngine:
             "players": {
                 "P1": self._build_player_state(
                     "P1",
-                    leader_card,
-                    deck_ids,
+                    ai_leader_card,
+                    ai_deck_ids,
                     rng,
                     mulligan=bool(mulligans.get("P1")),
                 ),
                 "P2": self._build_player_state(
                     "P2",
-                    leader_card,
-                    deck_ids,
+                    player_leader_card,
+                    player_deck_ids,
                     rng,
                     mulligan=bool(mulligans.get("P2")),
                 ),
@@ -289,6 +311,7 @@ class GLATEngine:
                     card.setdefault("base_cost", card.get("cost", 0) or 0)
                     card.setdefault("battle_power_bonus", 0)
                     card.setdefault("manual_power_bonus", 0)
+                    card.setdefault("rush", False)
                     card.setdefault("temporary_cost_bonus", 0)
                     card.setdefault("temporary_cost_bonus_expires", None)
             player["leader"].setdefault("battle_power_bonus", 0)
@@ -417,6 +440,7 @@ class GLATEngine:
             "state": card.get("state", "active"),
             "power": self._current_power(state, player, card),
             "attached_don": player["attached_don"].get(card["instance_id"], 0),
+            "rush": bool(card.get("rush", False)),
         }
 
     def _snapshot_state_for_replay(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -559,7 +583,7 @@ class GLATEngine:
     def _has_summoning_sickness(self, state: Dict[str, Any], card: Dict[str, Any]) -> bool:
         if card["instance_id"].endswith("LEADER"):
             return False
-        return card.get("played_turn") == state["turn"]
+        return card.get("played_turn") == state["turn"] and not card.get("rush", False)
 
     def _opponent_id(self, player_id: str) -> str:
         return "P2" if player_id == "P1" else "P1"
@@ -584,7 +608,9 @@ class GLATEngine:
             return None
 
         chosen_id = None
+        provider_was_asked = False
         if self.effect_choice_provider is not None:
+            provider_was_asked = True
             chosen_id = self.effect_choice_provider(
                 state=state,
                 player_id=player_id,
@@ -592,11 +618,46 @@ class GLATEngine:
                 options=copy.deepcopy(cards),
                 optional=optional,
             )
-        if chosen_id == "__default__":
-            chosen_id = "__default__"
-        elif chosen_id is not None:
+        if chosen_id not in (None, "__default__"):
             return next((card for card in cards if card["instance_id"] == chosen_id), None)
-        if optional and chosen_id is None and self.effect_choice_provider is not None:
+        if optional and chosen_id is None and provider_was_asked:
+            return None
+
+        agent_choice_id = None
+        if hasattr(self.agent, "choose_effect_card"):
+            agent_choice_id = self.agent.choose_effect_card(
+                state=state,
+                player_id=player_id,
+                prompt=prompt,
+                options=copy.deepcopy(cards),
+                optional=optional,
+            )
+            scored_choices = getattr(self.agent, "last_scored_effect_choices", [])
+            state.setdefault("effect_choice_history", []).append(
+                {
+                    "turn": state.get("turn"),
+                    "phase": state.get("phase"),
+                    "player": player_id,
+                    "prompt": prompt,
+                    "optional": optional,
+                    "options": [card["instance_id"] for card in cards],
+                    "chosen": agent_choice_id,
+                    "scored_options": [
+                        {
+                            "index": item.index,
+                            "card_id": item.card.get("card_id"),
+                            "instance_id": item.card.get("instance_id"),
+                            "score": item.score,
+                            "reasons": list(item.reasons),
+                            "summary": item.summary,
+                        }
+                        for item in scored_choices
+                    ],
+                }
+            )
+        if agent_choice_id is not None:
+            return next((card for card in cards if card["instance_id"] == agent_choice_id), None)
+        if optional and agent_choice_id is None and hasattr(self.agent, "choose_effect_card"):
             return None
         if strategy == "lowest":
             return self._choose_lowest_value_cards(cards, 1)[0]
@@ -895,6 +956,34 @@ class GLATEngine:
         player["board"].append(chosen)
         return chosen
 
+    def _play_from_hand(
+        self,
+        state: Dict[str, Any],
+        player_id: str,
+        player: Dict[str, Any],
+        predicate,
+        prompt: str = "Choose a card to play from hand",
+    ) -> Optional[Dict[str, Any]]:
+        eligible = [card for card in player["hand"] if predicate(card)]
+        if not eligible or len(player["board"]) >= 5:
+            return None
+
+        chosen = self._choose_one_effect_card(
+            state,
+            player_id,
+            prompt,
+            eligible,
+            strategy="best",
+            optional=True,
+        )
+        if chosen is None:
+            return None
+        player["hand"] = [card for card in player["hand"] if card["instance_id"] != chosen["instance_id"]]
+        chosen["played_turn"] = state["turn"]
+        chosen["state"] = "active"
+        player["board"].append(chosen)
+        return chosen
+
     def _ko_character(self, state: Dict[str, Any], owner_id: str, instance_id: str) -> Dict[str, Any]:
         player = state["players"][owner_id]
         card = self._remove_card_from_zone(player, instance_id, "board")
@@ -934,16 +1023,38 @@ class GLATEngine:
     ) -> Optional[str]:
         if not blocker_options:
             return None
-        if target != "leader":
+
+        def card_value(card: Dict[str, Any]) -> int:
+            effective_cost = self._effective_character_cost(defender, card)
+            power_value = self._current_power(state, defender, card) // 1000
+            return effective_cost * 2 + power_value
+
+        def protected_value() -> int:
+            if target == "leader":
+                life = defender.get("life", len(defender.get("life_cards", [])))
+                if life <= 1:
+                    return 40
+                if life == 2:
+                    return 24
+                if life == 3:
+                    return 12
+                return 4
+            return card_value(current_target_card)
+
+        candidates = []
+        for blocker in blocker_options:
+            blocker_power = self._current_power(state, defender, blocker)
+            survives = attacker_power < blocker_power
+            value = protected_value() - card_value(blocker)
+            if survives:
+                value += 40
+            if target != "leader":
+                value += 6
+            if value > 0:
+                candidates.append((value, card_value(blocker), blocker.get("name", ""), blocker))
+        if not candidates:
             return None
-        surviving_blockers = [
-            blocker
-            for blocker in blocker_options
-            if attacker_power < self._current_power(state, defender, blocker)
-        ]
-        if not surviving_blockers:
-            return None
-        blocker = self._choose_lowest_value_cards(surviving_blockers, 1)[0]
+        blocker = max(candidates, key=lambda item: (item[0], -item[1], item[2]))[3]
         return blocker["instance_id"]
 
     def _choose_counters_default(
@@ -1217,13 +1328,25 @@ class GLATEngine:
             result["extra_cost_paid"] = extra_cost_paid
         return result
 
-    def _choose_trigger_default(self, player: Dict[str, Any], card: Dict[str, Any]) -> bool:
+    def _choose_trigger_default(self, state: Dict[str, Any], player_id: str, card: Dict[str, Any]) -> bool:
+        player = state["players"][player_id]
         if card["card_id"] == "OP12-112":
             return self._leader_is_multicolored(player)
         if card["card_id"] == "OP12-098":
             return True
+        if card["card_id"] == "OP10-109":
+            return True
         if card["card_id"] == "OP06-115":
             return player["life"] == 0
+        if card["card_id"] == "OP12-097":
+            return True
+        if card["card_id"] == "OP14-108":
+            opponent = state["players"][self._opponent_id(player_id)]
+            return (
+                self._leader_is_multicolored(player)
+                and opponent["life"] <= 3
+                and any((target.get("power") or 0) <= 7000 for target in opponent["board"])
+            )
         return False
 
     def _should_activate_trigger(self, state: Dict[str, Any], player_id: str, card: Dict[str, Any]) -> bool:
@@ -1236,7 +1359,7 @@ class GLATEngine:
             )
             if isinstance(choice, bool):
                 return choice
-        return self._choose_trigger_default(player, card)
+        return self._choose_trigger_default(state, player_id, card)
 
     def _resolve_trigger_card(
         self,
@@ -1299,6 +1422,36 @@ class GLATEngine:
                 result["effect_result"]["skipped"] = "leader_not_multicolored"
             return result
 
+        if trigger_card["card_id"] == "OP10-109":
+            drawn = []
+            for _ in range(2):
+                card = self.draw_card(player)
+                if card is None:
+                    break
+                drawn.append(card["instance_id"])
+            discarded = self._discard_from_hand(
+                state,
+                player_id,
+                player,
+                1,
+                prompt="Choose a card to trash for Basil Hawkins trigger",
+            )
+            result["effect_result"] = {
+                "effect": "OP10-109",
+                "drawn": drawn,
+                "discarded": [item["instance_id"] for item in discarded],
+            }
+            return result
+
+        if trigger_card["card_id"] in {"OP12-097", "OP14-108"}:
+            effect_result = self.resolve_card_effect(state, player_id, trigger_card, "on_play")
+            result["effect_result"] = effect_result or {
+                "effect": trigger_card["card_id"],
+                "skipped": "trigger_effect_unresolved",
+            }
+            result["trigger_activated_effect"] = "on_play"
+            return result
+
         result["effect_result"] = {
             "effect": trigger_card["card_id"],
             "skipped": "unsupported_trigger",
@@ -1310,6 +1463,7 @@ class GLATEngine:
         state: Dict[str, Any],
         defender_id: str,
         current_target: str,
+        banish: bool = False,
     ) -> Dict[str, Any]:
         defender = state["players"][defender_id]
         revealed = self._remove_card_from_zone(
@@ -1317,6 +1471,26 @@ class GLATEngine:
             defender["life_cards"][0]["instance_id"],
             "life_cards",
         )
+        if banish:
+            defender["trash"].append(revealed)
+            self._advance_battle_context(
+                state,
+                "trigger_window",
+                {
+                    "current_target": current_target,
+                    "revealed_life": revealed["instance_id"],
+                    "trigger_available": False,
+                    "trigger_chosen": False,
+                    "resolution": "banish",
+                    "triggered_card_id": revealed["card_id"],
+                },
+            )
+            return {
+                "revealed": revealed,
+                "life_to_hand": [],
+                "banished_life": [revealed["instance_id"]],
+                "trigger_result": None,
+            }
         activate_trigger = self._should_activate_trigger(state, defender_id, revealed)
         self._advance_battle_context(
             state,
@@ -1347,6 +1521,7 @@ class GLATEngine:
             return {
                 "revealed": revealed,
                 "life_to_hand": [],
+                "banished_life": [],
                 "trigger_result": trigger_result,
             }
 
@@ -1364,6 +1539,7 @@ class GLATEngine:
         return {
             "revealed": revealed,
             "life_to_hand": [revealed["instance_id"]],
+            "banished_life": [],
             "trigger_result": None,
         }
 
@@ -1516,6 +1692,38 @@ class GLATEngine:
                     result["leader_reaction"] = leader_reaction
                 return result
 
+            if card_id == "EB03-053":
+                revealed_life = None
+                if player["life_cards"]:
+                    revealed_life_card = player["life_cards"][0]
+                    revealed_life_card["face_up"] = True
+                    revealed_life = revealed_life_card["instance_id"]
+                played = self._play_from_hand(
+                    state,
+                    player_id,
+                    player,
+                    lambda candidate: (
+                        candidate.get("category") == "Character"
+                        and (candidate.get("power") or 0) <= 6000
+                    ),
+                    "Choose a character to play from hand with Nami",
+                )
+                result = {
+                    "effect": "EB03-053",
+                    "revealed_life": revealed_life,
+                    "played_from_hand": played["instance_id"] if played is not None else None,
+                }
+                if played is not None:
+                    leader_reaction = self._resolve_opponent_leader_reaction_to_play(
+                        state,
+                        player_id,
+                        played,
+                        source="effect",
+                    )
+                    if leader_reaction is not None:
+                        result["leader_reaction"] = leader_reaction
+                return result
+
             return None
 
         if hook != "on_play":
@@ -1639,6 +1847,89 @@ class GLATEngine:
                 "discarded_for_cost": [item["instance_id"] for item in discarded],
                 "added_to_life": [item["instance_id"] for item in added],
                 "temporary_cost_bonus": 2,
+            }
+
+        if card_id == "OP07-085":
+            trash_options = [
+                candidate
+                for candidate in player["board"]
+                if candidate.get("category") == "Character"
+            ]
+            if not trash_options:
+                return {"effect": "OP07-085", "skipped": "no_character_to_trash_for_cost"}
+            ko_options = [
+                target for target in opponent["board"]
+                if target.get("category") == "Character"
+            ]
+            if not ko_options:
+                return {"effect": "OP07-085", "skipped": "no_valid_target"}
+            trashed_for_cost = self._choose_one_effect_card(
+                state,
+                player_id,
+                "Choose one of your characters to trash for Stussy",
+                trash_options,
+                strategy="lowest",
+                optional=True,
+            )
+            if trashed_for_cost is None:
+                return {"effect": "OP07-085", "skipped": "player_declined_choice"}
+            chosen_target = self._choose_one_effect_card(
+                state,
+                player_id,
+                "Choose an opponent character to K.O. with Stussy",
+                ko_options,
+                strategy="best",
+                optional=False,
+            )
+            if chosen_target is None:
+                return {"effect": "OP07-085", "skipped": "no_target_chosen"}
+            trash_result = self._ko_character(state, player_id, trashed_for_cost["instance_id"])
+            ko_result = self._ko_character(state, opponent_id, chosen_target["instance_id"])
+            return {
+                "effect": "OP07-085",
+                "trashed_for_cost": trashed_for_cost["instance_id"],
+                "trash_result": trash_result,
+                "ko_target": chosen_target["instance_id"],
+                "ko_result": ko_result,
+            }
+
+        if card_id == "EB04-058":
+            if player["life"] > 2:
+                return {"effect": "EB04-058", "skipped": "life_above_two"}
+            added = self._add_top_deck_to_life(player, 1)
+            if not added:
+                return {"effect": "EB04-058", "skipped": "deck_empty"}
+            return {
+                "effect": "EB04-058",
+                "added_to_life": [item["instance_id"] for item in added],
+            }
+
+        if card_id == "EB03-056":
+            eligible = [
+                target for target in opponent["board"]
+                if (target.get("base_cost", target.get("cost", 0)) or 0) <= 3
+            ]
+            if not eligible:
+                return {"effect": "EB03-056", "skipped": "no_valid_target"}
+            if not player["life_cards"]:
+                return {"effect": "EB03-056", "skipped": "no_life_cards"}
+            chosen = self._choose_one_effect_card(
+                state,
+                player_id,
+                "Choose an opponent character to K.O. with Belo Betty",
+                eligible,
+                strategy="best",
+                optional=True,
+            )
+            if chosen is None:
+                return {"effect": "EB03-056", "skipped": "player_declined_choice"}
+            player["life_cards"][0]["face_up"] = True
+            ko_result = self._ko_character(state, opponent_id, chosen["instance_id"])
+            return {
+                "effect": "EB03-056",
+                "revealed_life": player["life_cards"][0]["instance_id"],
+                "ko_target": chosen["instance_id"],
+                "ko_result": ko_result,
             }
 
         if card_id == "OP14-108":
@@ -1822,6 +2113,39 @@ class GLATEngine:
         self.validate_state(state)
         return result
 
+    def manual_set_card_rush(
+        self,
+        state: Dict[str, Any],
+        player_id: str,
+        instance_id: str,
+        enabled: bool = True,
+    ) -> Dict[str, Any]:
+        player = state["players"][player_id]
+        card = self._find_card_by_instance(player, instance_id)
+        if card is None or card["instance_id"] == player["leader"]["instance_id"]:
+            raise ValueError(f"Character {instance_id} not found for player {player_id}")
+        before_snapshot = self._snapshot_state_for_replay(state)
+        before = bool(card.get("rush", False))
+        card["rush"] = bool(enabled)
+        result = {
+            "card_id": card["card_id"],
+            "instance_id": instance_id,
+            "from": before,
+            "to": card["rush"],
+        }
+        self.log_action(
+            state,
+            player_id,
+            {
+                "type": "manual_set_card_rush",
+                "payload": {"card_id": instance_id, "rush": card["rush"]},
+            },
+            result,
+            before_snapshot=before_snapshot,
+        )
+        self.validate_state(state)
+        return result
+
     def manual_adjust_power(
         self,
         state: Dict[str, Any],
@@ -1837,7 +2161,10 @@ class GLATEngine:
         elif target == "board":
             cards = list(player["board"])
         else:
-            raise ValueError("target must be 'leader' or 'board'")
+            card = self._find_card_by_instance(player, target)
+            if card is None or card["instance_id"] == player["leader"]["instance_id"]:
+                raise ValueError("target must be 'leader', 'board', or a character instance id")
+            cards = [card]
         before_snapshot = self._snapshot_state_for_replay(state)
         changed_cards = []
         for card in cards:
@@ -2382,6 +2709,11 @@ class GLATEngine:
                     "paid_cost": paid_cost,
                     "effect_resolved": False,
                 }
+            card_data = self.lookup_card_data(card["card_id"]) or {}
+            if card_data.get("effect"):
+                result["effect_text"] = card_data["effect"]
+            if card_data.get("trigger"):
+                result["trigger_text"] = card_data["trigger"]
 
             effect_result = self.resolve_card_effect(state, player_id, card, "on_play")
             if effect_result is not None:
@@ -2492,7 +2824,13 @@ class GLATEngine:
                 )
                 return result
             if opponent["life"] > 0:
-                life_resolution = self._resolve_life_damage_step(state, defender_id, current_target)
+                banish = self._has_banish(attacker)
+                life_resolution = self._resolve_life_damage_step(
+                    state,
+                    defender_id,
+                    current_target,
+                    banish=banish,
+                )
                 trigger_result = life_resolution["trigger_result"]
                 result = {
                     "target": "leader",
@@ -2501,6 +2839,8 @@ class GLATEngine:
                     "life_after": opponent["life"],
                     "won_game": False,
                     "life_to_hand": list(life_resolution["life_to_hand"]),
+                    "banished_life": list(life_resolution.get("banished_life", [])),
+                    "banish": banish,
                     "trigger_result": trigger_result,
                     "defender_power": defender_power,
                     "defense": defense_result,
@@ -2514,11 +2854,13 @@ class GLATEngine:
                         "final_target": current_target,
                         "cleanup_reason": "life_damage_resolved",
                         "triggered": trigger_result is not None,
+                        "banish": banish,
                     },
                     {
                         "final_target": current_target,
                         "life_after": opponent["life"],
                         "triggered": trigger_result is not None,
+                        "banish": banish,
                     },
                 )
                 return result

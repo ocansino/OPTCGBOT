@@ -31,6 +31,9 @@ const els = {
   refreshBtn: document.querySelector("#refreshBtn"),
   newGameBtn: document.querySelector("#newGameBtn"),
   saveBtn: document.querySelector("#saveBtn"),
+  helpBtn: document.querySelector("#helpBtn"),
+  helpModal: document.querySelector("#helpModal"),
+  helpCloseBtn: document.querySelector("#helpCloseBtn"),
   prepareBtn: document.querySelector("#prepareBtn"),
   endHumanBtn: document.querySelector("#endHumanBtn"),
   runAiBtn: document.querySelector("#runAiBtn"),
@@ -54,6 +57,16 @@ function showSideTab(name) {
   els.replayTabBtn.classList.toggle("active", showingReplay);
   els.chatPane.classList.toggle("active", !showingReplay);
   els.replayPane.classList.toggle("active", showingReplay);
+}
+
+function showHelpModal() {
+  els.helpModal.classList.remove("hidden");
+  els.helpCloseBtn.focus();
+}
+
+function hideHelpModal() {
+  els.helpModal.classList.add("hidden");
+  els.helpBtn.focus();
 }
 
 async function apiGet(path) {
@@ -134,6 +147,11 @@ function makeStateChip(card) {
   return chip;
 }
 
+function playerIdFromZone(zoneLabel) {
+  const match = String(zoneLabel || "").match(/\b(P1|P2)\b/);
+  return match ? match[1] : null;
+}
+
 function renderCard(card, zoneLabel) {
   const tile = document.createElement("article");
   tile.className = "card-tile";
@@ -172,8 +190,13 @@ function renderCard(card, zoneLabel) {
   }
   if (card.attached_don) stats.appendChild(makeChip(`DON ${card.attached_don}`, "good"));
   if (card.has_blocker) stats.appendChild(makeChip("Blocker", "warn"));
+  if (card.rush) stats.appendChild(makeChip("Rush", "good"));
 
   tile.append(title, name, stats);
+  if (card.instance_id && zoneLabel && zoneLabel.includes(" board")) {
+    const playerId = playerIdFromZone(zoneLabel);
+    if (playerId) tile.appendChild(makePowerControls(playerId, card.instance_id, "this card"));
+  }
   return tile;
 }
 
@@ -191,7 +214,7 @@ function renderCardRow(cards, zoneLabel) {
   return row;
 }
 
-function makePowerControls(playerId, target) {
+function makePowerControls(playerId, target, targetLabel = target) {
   const controls = document.createElement("div");
   controls.className = "power-controls";
   [
@@ -201,7 +224,7 @@ function makePowerControls(playerId, target) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = label;
-    button.title = `${label} power to ${playerId} ${target}`;
+    button.title = `${label} power to ${playerId} ${targetLabel}`;
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       const sign = amount > 0 ? "+" : "";
@@ -382,6 +405,7 @@ function renderSelectedCard() {
     `Power bonus: ${powerBonusText(card) || "0"}`,
     `Counter: ${card.counter ?? "-"}`,
     `State: ${card.state || "-"}`,
+    `Rush: ${card.rush ? "yes" : "no"}`,
     `Attached DON: ${card.attached_don || 0}`,
     `Instance: ${card.instance_id || "-"}`,
   ];
@@ -606,9 +630,19 @@ els.refreshBtn.addEventListener("click", async () => {
 });
 
 els.newGameBtn.addEventListener("click", () => {
-  postControl("/api/new-game", "Starting new game", { match_mode: "physical_reported", seed: 7 });
+  postControl("/api/new-game", "Starting new game", { match_mode: "physical_reported" });
 });
 els.saveBtn.addEventListener("click", () => postControl("/api/save", "Saving"));
+els.helpBtn.addEventListener("click", showHelpModal);
+els.helpCloseBtn.addEventListener("click", hideHelpModal);
+els.helpModal.addEventListener("click", (event) => {
+  if (event.target === els.helpModal) hideHelpModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !els.helpModal.classList.contains("hidden")) {
+    hideHelpModal();
+  }
+});
 els.prepareBtn.addEventListener("click", () => postControl("/api/prepare-human-turn", "Preparing human turn"));
 els.endHumanBtn.addEventListener("click", () => postControl("/api/end-human-turn", "Ending human turn"));
 els.runAiBtn.addEventListener("click", () => postControl("/api/ai-turn", "Running AI turn"));
