@@ -59,6 +59,9 @@ def _card_view(card: Optional[Dict[str, Any]], hidden: bool = False) -> Dict[str
         "battle_power_bonus": card.get("battle_power_bonus", 0),
         "manual_power_bonus": card.get("manual_power_bonus", 0),
         "rush": bool(card.get("rush", False)),
+        "freeze": bool(card.get("freeze", False)),
+        "cannot_attack": bool(card.get("cannot_attack", False)),
+        "cannot_rest": bool(card.get("cannot_rest", False)),
         "temporary_cost_bonus": card.get("temporary_cost_bonus", 0),
     }
 
@@ -210,6 +213,30 @@ def serialize_replay(state: Dict[str, Any], position: Optional[int] = None) -> D
     }
 
 
+def _catalog_card_view(card: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": card.get("id", ""),
+        "name": card.get("name", ""),
+        "category": card.get("category", ""),
+        "cost": card.get("cost"),
+        "power": card.get("power"),
+        "counter": card.get("counter"),
+        "colors": card.get("colors", []),
+        "types": card.get("types", []),
+        "effect": card.get("effect", ""),
+    }
+
+
+def _card_cost_value(card: Dict[str, Any]) -> Optional[int]:
+    value = card.get("cost")
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 class WebMatchSession:
     def __init__(
         self,
@@ -268,13 +295,39 @@ class WebMatchSession:
             return {"mode": "default"}
         if self._active_defense_choice is not None:
             return copy.deepcopy(self._active_defense_choice)
-        return {"blocker_id": None, "counter_ids": []}
+        return {"blocker_id": None, "counter_ids": [], "manual_counter_cards": 0}
 
     def state_view(self) -> Dict[str, Any]:
         return serialize_state(self.state)
 
     def replay_view(self, position: Optional[int] = None) -> Dict[str, Any]:
         return serialize_replay(self.state, position)
+
+    def card_search_view(self, query: str, cost: Optional[int] = None, limit: int = 200) -> Dict[str, Any]:
+        normalized = query.strip().lower()
+        if len(normalized) < 2:
+            return {"query": query, "cost": cost, "total": 0, "limit": limit, "results": []}
+        if not self.engine.full_catalog:
+            self.engine.full_catalog = self.engine._build_full_catalog()
+        scored = []
+        for card_id, card in self.engine.full_catalog.items():
+            name = str(card.get("name", ""))
+            haystack = f"{card_id} {name}".lower()
+            if normalized not in haystack:
+                continue
+            if cost is not None and _card_cost_value(card) != cost:
+                continue
+            starts = card_id.lower().startswith(normalized) or name.lower().startswith(normalized)
+            exact = card_id.lower() == normalized or name.lower() == normalized
+            scored.append((0 if exact else 1 if starts else 2, card_id, card))
+        scored.sort(key=lambda item: (item[0], item[1]))
+        return {
+            "query": query,
+            "cost": cost,
+            "total": len(scored),
+            "limit": limit,
+            "results": [_catalog_card_view(card) for _score, _card_id, card in scored[:limit]],
+        }
 
     def save(self) -> None:
         save_state(self.engine, self.state, str(self.state_path))
@@ -353,16 +406,19 @@ class WebMatchSession:
         blocker_options = [
             card
             for card in defender.get("board", [])
-            if card.get("state") == "active" and self.engine._has_blocker(defender, card)
+            if card.get("state") == "active"
+            and self.engine._has_blocker(defender, card)
+            and not self.engine._cannot_rest(card)
         ]
-        counter_options = self.engine._available_counter_cards(defender)
-        if not blocker_options and not counter_options:
+        hand_count = len(defender.get("hand", []))
+        if not blocker_options and hand_count <= 0:
             return None
 
         attacker_power = self.engine._current_power(self.state, self.state["players"][AI_PLAYER], attacker)
         target_ref = payload.get("target", "leader")
         target_card = defender["leader"] if target_ref == "leader" else self.engine._find_card_by_instance(defender, target_ref)
         target_power = self.engine._current_power(self.state, defender, target_card) if target_card else None
+        counter_needed = max(0, attacker_power - target_power + 1000) if target_power is not None else None
         choices = [
             {
                 "id": "no_defense",
@@ -371,20 +427,12 @@ class WebMatchSession:
             }
         ]
         for card in blocker_options:
+            blocker_power = self.engine._current_power(self.state, defender, card)
             choices.append(
                 {
                     "id": f"blocker:{card['instance_id']}",
-                    "label": f"Block with {card['card_id']}",
+                    "label": f"Block with {card['card_id']} ({blocker_power})",
                     "choice": f"blocker:{card['instance_id']}",
-                }
-            )
-        for card in counter_options:
-            bonus = self.engine._counter_bonus_preview(defender, card)
-            choices.append(
-                {
-                    "id": f"counter:{card['instance_id']}",
-                    "label": f"Counter {card['card_id']} (+{bonus})",
-                    "choice": f"counter:{card['instance_id']}",
                 }
             )
 
@@ -397,8 +445,12 @@ class WebMatchSession:
             ),
             "attacker": _card_view(attacker),
             "target": target_ref,
+            "target_card": _card_view(target_card) if target_card else None,
             "attacker_power": attacker_power,
             "target_power": target_power,
+            "counter_needed": counter_needed,
+            "hand_count": hand_count,
+            "counter_card_input": hand_count > 0,
             "action": copy.deepcopy(action),
             "planned_index": planned_index,
             "ai_debug_index": len(self.state.get("ai_debug_history", [])) - 1,
@@ -592,15 +644,31 @@ class WebMatchSession:
 
         blocker_id = None
         counter_ids: list[str] = []
+        manual_counter_cards = 0
         if choice.startswith("blocker:"):
             blocker_id = choice.split(":", 1)[1]
+        elif choice.startswith("manual_counter:"):
+            raw_count = choice.split(":", 1)[1]
+            try:
+                manual_counter_cards = int(raw_count)
+            except ValueError:
+                return self._response(False, "Counter card count must be a whole number.")
+            if manual_counter_cards <= 0:
+                return self._response(False, "Counter card count must be greater than 0.")
+            hand_count = int(prompt.get("hand_count") or 0)
+            if hand_count > 0 and manual_counter_cards > hand_count:
+                return self._response(False, f"Only {hand_count} card{'s' if hand_count != 1 else ''} in hand.")
         elif choice.startswith("counter:"):
             counter_ids = [choice.split(":", 1)[1]]
         elif choice not in {"no_defense", "none", "no defense"}:
             return self._response(False, f"Unknown defense choice: {choice}")
 
         action = copy.deepcopy(prompt["action"])
-        self._active_defense_choice = {"blocker_id": blocker_id, "counter_ids": counter_ids}
+        self._active_defense_choice = {
+            "blocker_id": blocker_id,
+            "counter_ids": counter_ids,
+            "manual_counter_cards": manual_counter_cards,
+        }
         try:
             before_log_count = len(self.state.get("logs", []))
             self.engine.apply_action(self.state, action)
@@ -614,7 +682,11 @@ class WebMatchSession:
                     "status": "applied_after_defense",
                     "planned_index": prompt.get("planned_index"),
                     "action": copy.deepcopy(action),
-                    "defense_choice": {"blocker_id": blocker_id, "counter_ids": list(counter_ids)},
+                    "defense_choice": {
+                        "blocker_id": blocker_id,
+                        "counter_ids": list(counter_ids),
+                        "manual_counter_cards": manual_counter_cards,
+                    },
                 }
             )
         ai_logs = [
@@ -725,6 +797,19 @@ class CockpitRequestHandler(BaseHTTPRequestHandler):
                 except (TypeError, ValueError):
                     position = None
             self._send_json({"ok": True, "replay": self.session.replay_view(position)})
+            return
+        if parsed.path == "/api/cards":
+            query = parse_qs(parsed.query)
+            search = str(query.get("q", [""])[0])
+            raw_cost = str(query.get("cost", [""])[0]).strip()
+            cost = None
+            if raw_cost:
+                try:
+                    cost = int(raw_cost)
+                except ValueError:
+                    self._send_json({"ok": False, "error": "Cost must be a whole number."}, status=HTTPStatus.BAD_REQUEST)
+                    return
+            self._send_json({"ok": True, "cards": self.session.card_search_view(search, cost=cost)})
             return
         if parsed.path in {"/", "/index.html"}:
             self._send_static("index.html")

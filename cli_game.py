@@ -882,6 +882,9 @@ def run_manual_command(engine: GLATEngine, state: Dict[str, Any], command: str) 
         return False
 
     verb = parts[0].lower()
+    if len(parts) >= 3 and verb in {"cannot", "can"} and parts[1].lower() in {"attack", "rest"}:
+        verb = f"{verb}_{parts[1].lower()}"
+        parts = [verb, *parts[2:]]
     try:
         if verb == "draw" and len(parts) in (2, 3):
             amount = int(parts[1])
@@ -976,6 +979,24 @@ def run_manual_command(engine: GLATEngine, state: Dict[str, Any], command: str) 
         if verb == "set_state" and len(parts) == 3:
             player_id = owner_from_instance(parts[1])
             print("Card state:", engine.manual_set_card_state(state, player_id, parts[1], parts[2].lower()))
+            return True
+
+        status_commands = {
+            "freeze": ("freeze", True),
+            "unfreeze": ("freeze", False),
+            "cannot_attack": ("cannot_attack", True),
+            "can_attack": ("cannot_attack", False),
+            "cannotattack": ("cannot_attack", True),
+            "canattack": ("cannot_attack", False),
+            "cannot_rest": ("cannot_rest", True),
+            "can_rest": ("cannot_rest", False),
+            "cannotrest": ("cannot_rest", True),
+            "canrest": ("cannot_rest", False),
+        }
+        if verb in status_commands and len(parts) == 2:
+            status, enabled = status_commands[verb]
+            player_id = owner_from_instance(parts[1])
+            print("Card status:", engine.manual_set_card_status(state, player_id, parts[1], status, enabled))
             return True
 
         if verb == "move_don" and len(parts) in (4, 6):

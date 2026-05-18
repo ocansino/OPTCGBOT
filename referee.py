@@ -46,6 +46,8 @@ def get_legal_actions(state: Dict[str, Any], engine: Any) -> List[Dict[str, Any]
     for attacker in attackers:
         if attacker.get("state") != "active":
             continue
+        if engine._cannot_attack(attacker):
+            continue
         if engine._has_summoning_sickness(state, attacker):
             continue
 

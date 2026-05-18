@@ -167,6 +167,9 @@ class GLATEngine:
             "battle_power_bonus": 0,
             "manual_power_bonus": 0,
             "rush": False,
+            "freeze": False,
+            "cannot_attack": False,
+            "cannot_rest": False,
             "temporary_cost_bonus": 0,
             "temporary_cost_bonus_expires": None,
         }
@@ -192,6 +195,10 @@ class GLATEngine:
             "state": "active",
             "battle_power_bonus": 0,
             "manual_power_bonus": 0,
+            "rush": False,
+            "freeze": False,
+            "cannot_attack": False,
+            "cannot_rest": False,
         }
         life = self._leader_life(leader_card)
         hand = [deck.pop(0) for _ in range(5)]
@@ -312,10 +319,17 @@ class GLATEngine:
                     card.setdefault("battle_power_bonus", 0)
                     card.setdefault("manual_power_bonus", 0)
                     card.setdefault("rush", False)
+                    card.setdefault("freeze", False)
+                    card.setdefault("cannot_attack", False)
+                    card.setdefault("cannot_rest", False)
                     card.setdefault("temporary_cost_bonus", 0)
                     card.setdefault("temporary_cost_bonus_expires", None)
             player["leader"].setdefault("battle_power_bonus", 0)
             player["leader"].setdefault("manual_power_bonus", 0)
+            player["leader"].setdefault("rush", False)
+            player["leader"].setdefault("freeze", False)
+            player["leader"].setdefault("cannot_attack", False)
+            player["leader"].setdefault("cannot_rest", False)
 
         return state
 
@@ -441,6 +455,9 @@ class GLATEngine:
             "power": self._current_power(state, player, card),
             "attached_don": player["attached_don"].get(card["instance_id"], 0),
             "rush": bool(card.get("rush", False)),
+            "freeze": bool(card.get("freeze", False)),
+            "cannot_attack": bool(card.get("cannot_attack", False)),
+            "cannot_rest": bool(card.get("cannot_rest", False)),
         }
 
     def _snapshot_state_for_replay(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -584,6 +601,12 @@ class GLATEngine:
         if card["instance_id"].endswith("LEADER"):
             return False
         return card.get("played_turn") == state["turn"] and not card.get("rush", False)
+
+    def _cannot_attack(self, card: Dict[str, Any]) -> bool:
+        return bool(card.get("cannot_attack") or card.get("cannot_rest"))
+
+    def _cannot_rest(self, card: Dict[str, Any]) -> bool:
+        return bool(card.get("cannot_rest"))
 
     def _opponent_id(self, player_id: str) -> str:
         return "P2" if player_id == "P1" else "P1"
@@ -1141,6 +1164,7 @@ class GLATEngine:
         return {
             "blocker_id": response.get("blocker_id"),
             "counter_ids": list(response.get("counter_ids", [])),
+            "manual_counter_cards": int(response.get("manual_counter_cards") or 0),
         }
 
     def _resolve_blocker_window(
@@ -1211,6 +1235,7 @@ class GLATEngine:
             if defense_choice is not None
             else self._choose_counters_default(state, defender, current_target_card, attacker_power)
         )
+        manual_counter_cards = int(defense_choice.get("manual_counter_cards") or 0) if defense_choice is not None else 0
         self._advance_battle_context(
             state,
             "counter_window",
@@ -1218,11 +1243,46 @@ class GLATEngine:
                 "current_target": current_target,
                 "counter_options": [card["instance_id"] for card in self._available_counter_cards(defender)],
                 "planned_counters": list(planned_counter_ids),
+                "manual_counter_cards": manual_counter_cards,
                 "target_power_before_counters": self._current_power(state, defender, current_target_card),
             },
         )
 
         counter_results: List[Dict[str, Any]] = []
+        if manual_counter_cards > 0:
+            trashed_cards = []
+            for _ in range(min(manual_counter_cards, len(defender["hand"]))):
+                card = defender["hand"].pop(0)
+                defender["trash"].append(card)
+                trashed_cards.append(card["instance_id"])
+            needed = attacker_power - self._current_power(state, defender, current_target_card)
+            bonus = max(0, needed + 1000)
+            if bonus > 0:
+                current_target_card["battle_power_bonus"] = (
+                    current_target_card.get("battle_power_bonus") or 0
+                ) + bonus
+            counter_result = {
+                "used_counter": "manual_counter",
+                "card_id": f"Manual counter ({manual_counter_cards} card{'s' if manual_counter_cards != 1 else ''})",
+                "target": current_target_card["instance_id"],
+                "power_bonus": bonus,
+                "manual_card_count": manual_counter_cards,
+                "trashed_cards": trashed_cards,
+            }
+            counter_results.append(counter_result)
+            self._advance_battle_context(
+                state,
+                "counter_window",
+                {
+                    "current_target": current_target,
+                    "manual_counter_cards": manual_counter_cards,
+                    "manual_counter_power_bonus": bonus,
+                    "target_after_counter": current_target_card["instance_id"],
+                    "target_power_after_counter": self._current_power(state, defender, current_target_card),
+                },
+            )
+            return counter_results
+
         for counter_id in planned_counter_ids:
             if attacker_power < self._current_power(state, defender, current_target_card):
                 break
@@ -1284,6 +1344,11 @@ class GLATEngine:
             "counter_ids": [item["used_counter"] for item in counter_results],
             "current_target": blocker_result["current_target"],
             "counter_results": counter_results,
+            "manual_counter_cards": (
+                int(defense_choice.get("manual_counter_cards") or 0)
+                if defense_choice is not None
+                else 0
+            ),
         }
 
     def _apply_counter_from_instance(
@@ -2146,6 +2211,43 @@ class GLATEngine:
         self.validate_state(state)
         return result
 
+    def manual_set_card_status(
+        self,
+        state: Dict[str, Any],
+        player_id: str,
+        instance_id: str,
+        status: str,
+        enabled: bool = True,
+    ) -> Dict[str, Any]:
+        if status not in ("freeze", "cannot_attack", "cannot_rest"):
+            raise ValueError("status must be freeze, cannot_attack, or cannot_rest")
+        player = state["players"][player_id]
+        card = self._find_card_by_instance(player, instance_id)
+        if card is None:
+            raise ValueError(f"Card {instance_id} not found for player {player_id}")
+        before_snapshot = self._snapshot_state_for_replay(state)
+        before = bool(card.get(status, False))
+        card[status] = bool(enabled)
+        result = {
+            "card_id": card["card_id"],
+            "instance_id": instance_id,
+            "status_effect": status,
+            "from": before,
+            "to": card[status],
+        }
+        self.log_action(
+            state,
+            player_id,
+            {
+                "type": "manual_set_card_status",
+                "payload": {"card_id": instance_id, "status": status, "enabled": card[status]},
+            },
+            result,
+            before_snapshot=before_snapshot,
+        )
+        self.validate_state(state)
+        return result
+
     def manual_adjust_power(
         self,
         state: Dict[str, Any],
@@ -2500,9 +2602,13 @@ class GLATEngine:
         state["phase"] = "refresh"
         player = self.get_active_player(state)
         player["turn_flags"] = {}
-        for card in player["board"]:
+        for card in [player["leader"], *player["board"]]:
+            if card.get("freeze") and card.get("state") == "rested":
+                card["freeze"] = False
+                continue
             card["state"] = "active"
-        player["leader"]["state"] = "active"
+            if card.get("freeze"):
+                card["freeze"] = False
         player["don_area"].extend(player.get("spent_don", []))
         player["spent_don"] = []
         player["don_area"].extend(self.extract_all_attached_don(player))
@@ -2654,6 +2760,8 @@ class GLATEngine:
                 raise InvalidActionError("Attacker not found")
             if attacker["state"] != "active":
                 raise InvalidActionError("Attacker must be active")
+            if self._cannot_attack(attacker):
+                raise InvalidActionError("Attacker cannot attack")
             if self.is_first_turn_first_player(state):
                 raise InvalidActionError("First player cannot attack on turn 1")
             if self._has_summoning_sickness(state, attacker):
@@ -2751,7 +2859,7 @@ class GLATEngine:
         self._open_battle_context(state, attacker, target)
         blocker_options = [
             card for card in opponent["board"]
-            if card["state"] == "active" and self._has_blocker(opponent, card)
+            if card["state"] == "active" and self._has_blocker(opponent, card) and not self._cannot_rest(card)
         ]
         defense_plan = self._choose_defense_plan(
             state,

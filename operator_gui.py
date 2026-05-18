@@ -143,6 +143,9 @@ def summarize_action_result(result: Dict[str, Any]) -> str:
         return ", ".join(parts)
     if result.get("attached_to"):
         return f"attached {result.get('amount', 0)} DON to {result['attached_to']}"
+    if result.get("status_effect"):
+        label = str(result["status_effect"]).replace("_", " ").title()
+        return f"set {label} {'on' if result.get('to') else 'off'} for {result['instance_id']}"
     if result.get("instance_id") and result.get("to") is not None and isinstance(result.get("to"), bool):
         return f"set Rush {'on' if result['to'] else 'off'} for {result['instance_id']}"
     if result.get("target"):
@@ -848,13 +851,23 @@ def apply_operator_action(
     state: Dict[str, Any],
     action: Dict[str, Any],
 ) -> bool:
-    if not engine.is_valid_action(state, action):
-        return False
     try:
         engine.apply_action(state, action)
     except InvalidActionError:
         return False
     return True
+
+
+def explain_operator_action_failure(
+    engine: GLATEngine,
+    state: Dict[str, Any],
+    action: Dict[str, Any],
+) -> Optional[str]:
+    try:
+        engine._validate_action(state, action)
+    except InvalidActionError as exc:
+        return str(exc)
+    return None
 
 
 def handle_operator_shorthand_report(
@@ -928,6 +941,9 @@ def process_correction_command(
     if not parts:
         return None
     verb = parts[0].lower()
+    if len(parts) >= 3 and verb in {"cannot", "can"} and parts[1].lower() in {"attack", "rest"}:
+        verb = f"{verb}_{parts[1].lower()}"
+        parts = [verb, *parts[2:]]
 
     if verb in {"find", "where"} and len(parts) in (2, 3, 4):
         reference = parts[1]
@@ -1010,6 +1026,41 @@ def process_correction_command(
         result = engine.manual_set_card_rush(state, found_player, card["instance_id"], enabled)
         _record_correction(state, raw, result)
         return True, f"Correction recorded: set Rush {'on' if enabled else 'off'} for {card['card_id']}."
+
+    status_commands = {
+        "freeze": ("freeze", True),
+        "unfreeze": ("freeze", False),
+        "cannot_attack": ("cannot_attack", True),
+        "can_attack": ("cannot_attack", False),
+        "cannotattack": ("cannot_attack", True),
+        "canattack": ("cannot_attack", False),
+        "cannot_rest": ("cannot_rest", True),
+        "can_rest": ("cannot_rest", False),
+        "cannotrest": ("cannot_rest", True),
+        "canrest": ("cannot_rest", False),
+    }
+    if verb in status_commands and len(parts) in (2, 3):
+        status, enabled = status_commands[verb]
+        player_id = None
+        reference = parts[1]
+        if len(parts) == 3:
+            player_id = _normalize_player_id(parts[1])
+            if player_id is None:
+                return False, "Use P1/AI or P2/Human before the card reference."
+            reference = parts[2]
+        card, found_player, _found_zone, message = _resolve_correction_card(
+            state,
+            reference,
+            player_id=player_id,
+            zone="board",
+            include_leader=True,
+        )
+        if card is None or found_player is None:
+            return False, message
+        result = engine.manual_set_card_status(state, found_player, card["instance_id"], status, enabled)
+        _record_correction(state, raw, result)
+        label = status.replace("_", " ").title()
+        return True, f"Correction recorded: set {label} {'on' if enabled else 'off'} for {card['card_id']}."
 
     if verb == "remove" and len(parts) in (2, 3, 4):
         player_id = None
@@ -1133,6 +1184,9 @@ def process_operator_command(
 
     action = parse_command_to_action(raw)
     if action:
+        failure = explain_operator_action_failure(engine, state, action)
+        if failure:
+            return False, failure
         try:
             engine.apply_action(state, action)
         except InvalidActionError as exc:

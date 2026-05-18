@@ -1,7 +1,7 @@
 Grand Line AI Trainer (GLAT)
 Project Design Doc
 
-Last updated: 2026-04-29
+Last updated: 2026-05-17
 
 1. Project Goal
 
@@ -114,7 +114,21 @@ What is already built:
 - guided unsupported-effect handling for physical reports through skip, manual-done, note-only, or implement-later paths
 - first-pass auditable correction commands for physical-table drift, including life correction, card state correction, moving tracked cards between zones, and removing tracked cards to trash
 - manual card-control commands for common physical-table corrections and effect simulation, including individual character power adjustment, board/leader-wide power adjustment, active/rested toggles, played-rested reporting, and temporary Rush assignment
+- manual status-effect commands for current practice/effect simulation:
+  - Freeze, where a rested card skips its next refresh and then clears the flag
+  - Cannot Attack, where a card cannot declare attacks but can still rest/block when otherwise legal
+  - Cannot Rest, where a card can refresh active but cannot attack, block, or rest for future effect costs
 - clearer battle/counter summaries in the cockpit/operator timeline so blocked or countered attacks do not expose raw battle JSON to the player
+- click-to-attack cockpit interaction:
+  - click a human leader/character to select it as attacker
+  - click an opposing leader/character to submit the matching engine attack command
+  - valid attack targets are highlighted and Escape cancels the pending attack selection
+- physical-table human defense prompt now matches real play better:
+  - human defense prompts show No Defense and legal blocker choices
+  - simulated hand counter cards are no longer exposed to the player as individual choices
+  - player can enter how many real physical cards were used for countering
+  - simulated hand size is reduced by that number so tracked hand count remains closer to the physical game
+  - AI-side counter/blocker behavior remains unchanged and still uses engine-tracked hand cards and value-based blocker/counter logic
 - regression pressure tests for physical-reported turns flowing through console commands into AI responses without terminal-only interaction, including a multi-turn flow with correction and unsupported-effect handling
 - first-pass correction lookup helpers through find/where commands so ambiguous card references can be resolved by player, zone, and instance id
 - targeted static effect support for OP12-021 as a printed blocker, while other unsupported text remains manually resolved until implemented
@@ -736,11 +750,13 @@ Current updated order after the intake/parser/operator-GUI and battle-stabilizat
 - 9. Completed first pass: local web cockpit with command chat, board state, pending prompts, replay/debug surfaces, and heuristic AI mode
 - 10. Completed first pass: heuristic planning agent with one-action replanning, score/reason debug, board-vs-life targeting, and value-based default blocking
 - 11. Completed first pass: heuristic effect-choice scoring, opponent-response awareness, and shallow rollout scoring
-- 12. Completed first pass: cockpit practice-game ergonomics including fixed chat/replay tabs, command help, individual character power controls, manual active/rested state, played-rested reporting, Rush override, and cleaner battle/counter summaries
+- 12. Completed first pass: cockpit practice-game ergonomics including fixed chat/replay tabs, command help, click-to-attack board interaction, individual character power controls, manual active/rested state, played-rested reporting, Rush override, and cleaner battle/counter summaries
 - 13. Completed current pass: refreshed deck/effect inventory has coverage for the current active AI deck, with Koala as the AI leader and Nico Robin/Banish support available on the player side
-- 14. Active priority: continue targeted card-effect support only when the deck changes or new test scenarios expose missing behavior
-- 15. Active priority: tune/evaluate the heuristic agent with longer games, scenario metrics, and AI-vs-AI/self-play scaffolding
-- 16. Add decision-log export, post-game review, lesson tracking, and learned policy experiments on top of the same engine
+- 14. Completed first pass: manual effect-simulation flags for Freeze, Cannot Attack, and Cannot Rest, including command support, cockpit display chips, and rules hooks for refresh, attack, and blocking legality
+- 15. Completed first pass: physical-table human defense prompt now asks for blocker choice or manual counter card count instead of listing simulated hand counter cards
+- 16. Active priority: continue targeted card-effect support only when the deck changes or new test scenarios expose missing behavior
+- 17. Active priority: tune/evaluate the heuristic agent with longer games, scenario metrics, and AI-vs-AI/self-play scaffolding
+- 18. Add decision-log export, post-game review, lesson tracking, and learned policy experiments on top of the same engine
 
 Near-term recommended attack plan:
 - 1. Run longer physical-table smoke games through the web cockpit and record every moment where reporting feels awkward, ambiguous, or requires correction.
@@ -762,7 +778,9 @@ Current project assessment:
   - physical_reported human play-by-ID flow for known card IDs
   - separate match console for commands, AI action reporting, choices, corrections, and manual effect notes
   - local web cockpit for chat-first play, board inspection, pending prompts, replay timeline, command help, and AI debug output
-  - practice-game correction tools for individual/board/leader power adjustment, active/rested card state, played-rested entries, and Rush overrides
+  - cockpit click-to-attack interaction layered over the existing attack command path
+  - practice-game correction tools for individual/board/leader power adjustment, active/rested card state, played-rested entries, Rush overrides, and manual Freeze/Cannot Attack/Cannot Rest flags
+  - physical-table human defense prompts that preserve legal blockers while allowing manual counter-card counts to keep simulated hand size aligned with the real hand
   - heuristic AI mode with one-action replanning, score explanations, board-vs-life targeting, value-based blocking, effect-choice scoring, opponent-response awareness, and shallow rollout scoring
   - current AI-deck effect inventory and targeted implementation for the effects needed by the active 51-card AI deck
   - separate AI/player deck files, with OP12-081 Koala for AI and OP09-062 Nico Robin for the player/default side
@@ -773,6 +791,7 @@ Current project assessment:
 - Fragile or incomplete:
   - long real physical games have not been pressure-tested enough to know the most painful reporting/correction loops
   - command coverage is broader than before, but new commands still need to be mirrored in the Help modal and examples whenever added
+  - physical counter-card-count input preserves hand size but does not yet know the actual counter values/cards used, so it is a practical physical-play abstraction rather than full digital fidelity
   - legal action generation still being outside the main engine file can make future ownership confusing
   - unsupported card text is intentionally not automated unless specifically implemented
   - replay browsing is useful for debugging but still needs better filters/export and stronger links to AI decisions, battle traces, and later training logs

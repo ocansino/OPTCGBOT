@@ -11,6 +11,10 @@ def always_trigger(**_kwargs) -> bool:
     return True
 
 
+def manual_two_card_counter(**_kwargs):
+    return {"manual_counter_cards": 2}
+
+
 class SmokeTests(unittest.TestCase):
     def test_initial_setup_uses_separate_ai_and_player_decks(self) -> None:
         engine = GLATEngine(agent=FakePlanningAgent())
@@ -72,6 +76,49 @@ class SmokeTests(unittest.TestCase):
 
         self.assertTrue(changed, message)
         self.assertEqual(card["manual_power_bonus"], 1000)
+
+    def test_manual_status_effect_commands_affect_refresh_and_attack(self) -> None:
+        engine = GLATEngine(agent=FakePlanningAgent())
+        state = engine.create_initial_state(seed=7, match_mode="physical_reported")
+        process_operator_command(engine, state, "played OP12-086")
+        card = state["players"]["P2"]["board"][0]
+
+        changed, message = process_operator_command(engine, state, f"cannot attack {card['instance_id']}")
+        self.assertTrue(changed, message)
+        state["active_player"] = "P2"
+        state["turn"] = 3
+        state["phase"] = "main"
+        self.assertFalse(
+            engine.is_valid_action(
+                state,
+                {"type": "attack", "payload": {"attacker_id": card["instance_id"], "target": "leader"}},
+            )
+        )
+
+        changed, message = process_operator_command(engine, state, f"freeze {card['instance_id']}")
+        self.assertTrue(changed, message)
+        card["state"] = "rested"
+        engine.refresh_phase(state)
+        self.assertEqual(card["state"], "rested")
+        self.assertFalse(card["freeze"])
+
+    def test_manual_counter_card_count_reduces_human_hand(self) -> None:
+        engine = GLATEngine(agent=FakePlanningAgent(), defense_choice_provider=manual_two_card_counter)
+        state = engine.create_initial_state(seed=7)
+        state["active_player"] = "P1"
+        state["turn"] = 3
+        state["phase"] = "main"
+        state["players"]["P2"]["board"] = []
+        before_hand = len(state["players"]["P2"]["hand"])
+
+        result = engine.apply_action(
+            state,
+            {"type": "attack", "payload": {"attacker_id": "P1-LEADER", "target": "leader"}},
+        )
+
+        self.assertTrue(result["blocked_or_countered"])
+        self.assertEqual(len(state["players"]["P2"]["hand"]), before_hand - 2)
+        self.assertEqual(result["defense"]["counters"][0]["manual_card_count"], 2)
 
     def test_local_planning_modes_are_available(self) -> None:
         self.assertIsInstance(build_local_planning_agent("fake"), FakePlanningAgent)

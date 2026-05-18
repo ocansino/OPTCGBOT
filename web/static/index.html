@@ -14,6 +14,7 @@
           <div id="matchMeta" class="match-meta">Loading match...</div>
         </div>
         <div class="top-actions">
+          <button id="paletteBtn" type="button">Commands</button>
           <button id="helpBtn" type="button">Help</button>
           <button id="refreshBtn" type="button">Refresh</button>
           <button id="newGameBtn" type="button">New Game</button>
@@ -40,6 +41,8 @@
           <div class="side-tabs" role="tablist" aria-label="Side panel view">
             <button id="chatTabBtn" class="active" type="button">Chat</button>
             <button id="replayTabBtn" type="button">Replay</button>
+            <button id="cardTabBtn" type="button">Card</button>
+            <button id="finderTabBtn" type="button">Find</button>
           </div>
 
           <section id="chatPane" class="tab-pane active">
@@ -59,6 +62,35 @@
             <div id="replaySnapshot" class="snapshot-grid"></div>
           </section>
 
+          <section id="cardPane" class="tab-pane">
+            <div id="cardDetails" class="details-body">Select a visible card.</div>
+          </section>
+
+          <section id="finderPane" class="tab-pane">
+            <form id="cardFinderForm" class="finder-form">
+              <input
+                id="cardFinderInput"
+                type="text"
+                autocomplete="off"
+                placeholder="Search card name or ID"
+                aria-label="Search card name or ID"
+              >
+              <input
+                id="cardFinderCostInput"
+                type="number"
+                min="0"
+                step="1"
+                autocomplete="off"
+                placeholder="Cost"
+                aria-label="Filter by cost"
+              >
+              <button type="submit">Search</button>
+            </form>
+            <div id="cardFinderStatus" class="finder-status"></div>
+            <div id="cardFinderResults" class="finder-results"></div>
+            <div id="cardFinderDetails" class="finder-details">Search for a card.</div>
+          </section>
+
           <form id="commandForm" class="command-form">
             <input
               id="commandInput"
@@ -76,10 +108,6 @@
 
       <section class="details-grid">
         <article class="details-panel">
-          <h2>Selected Card</h2>
-          <div id="cardDetails" class="details-body">Select a visible card.</div>
-        </article>
-        <article class="details-panel">
           <h2>Latest Diff</h2>
           <pre id="latestDiff" class="debug-text"></pre>
         </article>
@@ -87,6 +115,24 @@
           <h2>AI Debug</h2>
           <pre id="aiDebug" class="debug-text"></pre>
         </article>
+      </section>
+    </div>
+
+    <div id="paletteModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="paletteTitle">
+      <section class="palette-modal">
+        <header class="modal-header">
+          <h2 id="paletteTitle">Command Palette</h2>
+          <button id="paletteCloseBtn" type="button" aria-label="Close command palette">Close</button>
+        </header>
+        <input
+          id="paletteInput"
+          class="palette-input"
+          type="text"
+          autocomplete="off"
+          placeholder="Search commands"
+          aria-label="Search commands"
+        >
+        <div id="paletteList" class="palette-list" role="listbox"></div>
       </section>
     </div>
 
@@ -110,6 +156,7 @@
             <code>play rested OP12-021</code>
             <code>attach 1 leader</code>
             <code>attach P2-CARD-052 1</code>
+            <code>click your attacker, then click their target</code>
             <code>attack leader leader</code>
             <code>attack P2-CARD-052 leader</code>
           </section>
@@ -120,6 +167,14 @@
             <code>rush P2-CARD-052</code>
             <code>rush P2 P2-CARD-052</code>
             <code>unrush P2-CARD-052</code>
+            <code>freeze P2-CARD-052</code>
+            <code>unfreeze P2-CARD-052</code>
+            <code>cannot_attack P2-CARD-052</code>
+            <code>cannot attack P2-CARD-052</code>
+            <code>can_attack P2-CARD-052</code>
+            <code>cannot_rest P2-CARD-052</code>
+            <code>cannot rest P2-CARD-052</code>
+            <code>can_rest P2-CARD-052</code>
           </section>
           <section>
             <h3>Power</h3>
